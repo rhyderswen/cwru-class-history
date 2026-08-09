@@ -1,0 +1,176 @@
+import ExcelJS from "exceljs";
+import { downloadCourseList } from "./sis.js";
+import { getPastNYearsTermNames } from "./utils.js";
+
+export enum CourseComponent {
+  CLINICAL = "Clinical",
+  COOP = "Co-op",
+  DISCUSSION = "Discussion",
+  DISSERTATION = "Dissertation",
+  FIELD = "Field Study",
+  INDEPENDENT = "Independent Study",
+  LAB = "Laboratory",
+  LECTURE = "Lecture",
+  PERFORMANCE = "Performance",
+  PHYSICALEDUCATION = "Physical Education",
+  PRACTICUM = "Practicum",
+  RECITAL = "Recital",
+  RECITATION = "Recitation",
+  RESEARCH = "Research",
+  SEMINAR = "Seminar",
+  STUDIO = "Studio",
+  THESIS = "Thesis",
+  WORKSHOP = "Workshop",
+  UNKNOWN = "Unknown",
+}
+
+export const COMPONENT_NAMES: Record<string, CourseComponent> = {
+  CLN: CourseComponent.CLINICAL,
+  COP: CourseComponent.COOP,
+  DIS: CourseComponent.DISCUSSION,
+  DSR: CourseComponent.DISSERTATION,
+  FLD: CourseComponent.FIELD,
+  IND: CourseComponent.INDEPENDENT,
+  LAB: CourseComponent.LAB,
+  LEC: CourseComponent.LECTURE,
+  PER: CourseComponent.PERFORMANCE,
+  PED: CourseComponent.PHYSICALEDUCATION,
+  PRA: CourseComponent.PRACTICUM,
+  RCT: CourseComponent.RECITAL,
+  REC: CourseComponent.RECITATION,
+  RSC: CourseComponent.RESEARCH,
+  SEM: CourseComponent.SEMINAR,
+  STU: CourseComponent.STUDIO,
+  THE: CourseComponent.THESIS,
+  WRK: CourseComponent.WORKSHOP,
+  Unknown: CourseComponent.UNKNOWN,
+};
+
+function parseComponent(raw: string): CourseComponent {
+  const code = raw.trim().toUpperCase();
+  const match = COMPONENT_NAMES[code];
+  return match ?? CourseComponent.UNKNOWN;
+}
+
+export interface CourseInfo {
+  catalogNumber: string;
+  title: string;
+}
+
+export interface OfferingInfo {
+  component: CourseComponent;
+  courseNumber: number;
+  days: string;
+  time: string;
+  room: string;
+  instructor: string;
+  enrollmentCap: number;
+  enrollmentTotal: number;
+}
+
+export type CourseRow = CourseInfo & OfferingInfo;
+
+export interface CourseData {
+  courseCode: string;
+  title: string;
+  offerings: Record<string, OfferingInfo[]>;
+}
+
+export async function getCourseData(departmentId: string) {
+  const terms = await getPastNYearsTermNames(4);
+
+  const courseData = (
+    await Promise.all(
+      terms.map(async (term) => {
+        const savePath = await downloadCourseList(term, departmentId);
+        if (savePath) {
+          const courseList = await parseCourseListXlsx(savePath);
+          if (courseList.length > 0) {
+            return { term, courseList };
+          }
+        }
+      }),
+    )
+  ).filter((item) => item !== undefined);
+
+  const courseMap = new Map<string, CourseData>();
+
+  for (const { term, courseList } of courseData) {
+    for (const { catalogNumber, title, ...offeringInfo } of courseList) {
+      const courseCode = `${departmentId} ${catalogNumber}`;
+
+      if (!courseMap.has(courseCode)) {
+        courseMap.set(courseCode, { courseCode, title: title, offerings: {} });
+      }
+
+      const course = courseMap.get(courseCode)!;
+
+      if (!course.offerings[term]) {
+        course.offerings[term] = [];
+      }
+
+      course.offerings[term].push(offeringInfo);
+    }
+  }
+
+  return Array.from(courseMap.values());
+}
+
+export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+  const sheet = workbook.worksheets[0];
+
+  const headerRow = sheet.getRow(1).values as string[];
+  const colIndex = (name: string) => headerRow.findIndex((h) => h === name);
+
+  const rows: CourseRow[] = [];
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header
+
+    const courseNumber = Number(row.getCell(colIndex("CLASS_NBR")).value ?? -1);
+    if (rows.some((r) => r.courseNumber == courseNumber)) return; // skip duplicates
+
+    let enrollmentCap = row.getCell(colIndex("SSR_CMB_ENRLCAP_FL")).value;
+    let enrollmentTot = row.getCell(colIndex("SSR_CMB_ENRLTOT_FL")).value;
+    if (enrollmentCap == "0" && enrollmentTot == "0") {
+      enrollmentCap = row.getCell(colIndex("ENRL_CAP")).value;
+      enrollmentTot = row.getCell(colIndex("ENRL_TOT")).value;
+    }
+
+    rows.push({
+      catalogNumber: String(row.getCell(colIndex("CATALOG_NBR")).value ?? ""),
+      title: String(row.getCell(colIndex("CW_CLASS_TITLE")).value ?? ""),
+      component: parseComponent(String(row.getCell(colIndex("SSR_COMPONENT")).value ?? "")),
+      courseNumber: courseNumber,
+      days: String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim(),
+      time: String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? ""),
+      room: String(row.getCell(colIndex("CW_MEETING_ROOM")).value ?? ""),
+      instructor: String(row.getCell(colIndex("INSTR_NAME")).value ?? ""),
+      enrollmentCap: Number(enrollmentCap ?? -1),
+      enrollmentTotal: Number(enrollmentTot ?? -1),
+    });
+  });
+
+  return rows;
+}
+
+export async function createEmptyXlsx(filePath: string) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Coursees");
+
+  sheet.addRow([
+    "CATALOG_NBR",
+    "CW_CLASS_TITLE",
+    "SSR_COMPONENT",
+    "CLASS_NBR",
+    "CLASS_MTG_DAYS",
+    "CW_CLASS_MTG_TIMES",
+    "CW_MEETING_ROOM",
+    "INSTR_NAME",
+    "SSR_CMB_ENRLCAP_FL",
+    "SSR_CMB_ENRLTOT_FL",
+  ]);
+
+  await workbook.xlsx.writeFile(filePath);
+}
