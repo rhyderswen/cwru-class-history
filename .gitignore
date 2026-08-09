@@ -1,3 +1,6 @@
+src/server/downloads
+config.json
+
 # Logs
 logs
 *.log
