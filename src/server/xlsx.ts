@@ -1,6 +1,6 @@
+import { downloadCourseList } from "#/sis.js";
+import { getPastNYearsTermNames } from "#/utils.js";
 import ExcelJS from "exceljs";
-import { downloadCourseList } from "./sis.js";
-import { getPastNYearsTermNames } from "./utils.js";
 
 export enum CourseComponent {
   CLINICAL = "Clinical",

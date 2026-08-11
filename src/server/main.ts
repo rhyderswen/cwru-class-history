@@ -1,6 +1,6 @@
+import { getCourseData } from "#/xlsx.js";
 import express from "express";
 import ViteExpress from "vite-express";
-import { getCourseData } from "./xlsx.js";
 
 const app = express();
 const apiRouter = express.Router();
