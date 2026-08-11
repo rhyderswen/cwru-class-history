@@ -113,7 +113,7 @@ export async function getCourseData(departmentId: string) {
     }
   }
 
-  return Array.from(courseMap.values());
+  return Array.from(courseMap.values()).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
 }
 
 export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]> {

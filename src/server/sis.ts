@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { readdirSync, unlinkSync } from "fs";
 import path from "path";
 import { chromium, Download } from "playwright";
@@ -110,6 +111,12 @@ async function checkIfRecentlyCached(subjectCode: string, termLabel: string) {
 
   const filePath = path.join(OUTPUT_DIR, file);
 
+  if (!(await isValidXlsx(filePath))) {
+    console.log(`Cached file for ${subjectCode} ${termLabel} is corrupted, re-downloading...`);
+    unlinkSync(filePath);
+    return "";
+  }
+
   const msPerDay = 1000 * 60 * 60 * 24;
   const today = new Date(new Date().toISOString().split("T")[0]);
   const downloadedDay = new Date(file.split("_")[2].split(".")[0]);
@@ -129,6 +136,16 @@ async function checkIfRecentlyCached(subjectCode: string, termLabel: string) {
   }
 
   return filePath;
+}
+
+async function isValidXlsx(filePath: string): Promise<boolean> {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    return workbook.worksheets.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchActiveTerms() {
