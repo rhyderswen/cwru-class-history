@@ -12,7 +12,13 @@ function Search() {
     queryKey: ["department", department],
     queryFn: async () => {
       const res = await fetch(`/api/lookupDepartment/${department}`);
+
+      if (res.status === 404) {
+        return []; // no courses found in this department
+      }
+
       if (!res.ok) throw new Error("Failed to fetch");
+
       return res.json();
     },
     staleTime: 30 * 60 * 1000, // 30 minutes
@@ -52,6 +58,7 @@ function Search() {
               offerings={item.offerings}
             />
           ))}
+          {filterData(data).length === 0 && <Center>No courses found in the past 4 years.</Center>}
         </Stack>
       }
     </div>

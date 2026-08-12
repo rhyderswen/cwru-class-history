@@ -1,5 +1,6 @@
 import SearchBar, { SearchBarHandle } from "@/components/SearchBar";
 import { Box, Group, Title } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 
@@ -21,6 +22,16 @@ const Topbar = ({ children }: TopbarProps) => {
   const location = useLocation();
   const [_, setSearchParams] = useSearchParams();
   const searchBarRef = useRef<SearchBarHandle>(null);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const res = await fetch(`/api/getDepartments`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
 
   useEffect(() => {
     if (location.pathname === "/") {
@@ -46,7 +57,8 @@ const Topbar = ({ children }: TopbarProps) => {
             }}
           >
             <SearchBar
-              options={MOCKDATA}
+              options={data}
+              loading={isLoading}
               onSubmit={(value) => navigate(`/search/${value.substring(0, 4)}`)}
               placeholder="Search for a department..."
               validation={(value) =>

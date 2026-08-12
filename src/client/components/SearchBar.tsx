@@ -1,5 +1,6 @@
 import { Combobox, Loader, TextInput, useCombobox } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import fuzzysort from "fuzzysort";
 import { useImperativeHandle, useRef, useState } from "react";
 
 export interface SearchBarHandle {
@@ -10,6 +11,7 @@ export interface SearchBarProps {
   onSubmit?: (value: string) => void;
   onChange?: (value: string) => void;
   options?: string[];
+  loading?: boolean;
   placeholder?: string;
   validation?: (value: string) => string | null;
   ref?: React.Ref<SearchBarHandle>;
@@ -19,6 +21,7 @@ function SearchBar({
   onSubmit,
   onChange,
   options,
+  loading,
   placeholder,
   validation = () => null,
   ref,
@@ -32,7 +35,6 @@ function SearchBar({
     },
   });
   const formRef = useRef<HTMLFormElement>(null);
-  const [loading, setLoading] = useState(false);
   const [value, setValue] = useState("");
 
   useImperativeHandle(ref, () => ({
@@ -41,13 +43,11 @@ function SearchBar({
     },
   }));
 
-  const comboboxOptions = (options || [])
-    .filter((item) => item.toLowerCase().includes(value.toLowerCase()))
-    .map((item) => (
-      <Combobox.Option value={item} key={item}>
-        {item}
-      </Combobox.Option>
-    ));
+  const comboboxOptions = fuzzysort.go(value, options || [], { limit: 0 }).map((item) => (
+    <Combobox.Option value={item.target} key={item.target}>
+      {item.target}
+    </Combobox.Option>
+  ));
 
   return (
     <form ref={formRef} onSubmit={form.onSubmit((values) => onSubmit?.(values.input))}>
@@ -95,10 +95,12 @@ function SearchBar({
           />
         </Combobox.Target>
 
-        <Combobox.Dropdown hidden={options === undefined}>
-          <Combobox.Options>
+        <Combobox.Dropdown hidden={!loading && options === undefined}>
+          <Combobox.Options mah={250} style={{ overflowY: "auto" }}>
             {comboboxOptions}
-            {comboboxOptions?.length === 0 && <Combobox.Empty>No results found</Combobox.Empty>}
+            {loading ?
+              <Combobox.Empty>Fetching departments...</Combobox.Empty>
+            : comboboxOptions?.length === 0 && <Combobox.Empty>No results found</Combobox.Empty>}
           </Combobox.Options>
         </Combobox.Dropdown>
       </Combobox>

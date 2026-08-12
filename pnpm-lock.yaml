@@ -32,6 +32,9 @@ importers:
       express:
         specifier: ^5.1.0
         version: 5.2.1
+      fuzzysort:
+        specifier: ^4.0.1
+        version: 4.0.1
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
@@ -1108,6 +1111,9 @@ packages:
 
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
+
+  fuzzysort@4.0.1:
+    resolution: {integrity: sha512-aQwFrCgx1HmMSnxK5UQIsRL9KBwj2AffSMo8SmbyvZvd1NcZXvVRYm8/hs9QTn+rDwa3QKg1TZoctf8Y3t1vgg==}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -2767,6 +2773,8 @@ snapshots:
       rimraf: 2.7.1
 
   function-bind@1.1.2: {}
+
+  fuzzysort@4.0.1: {}
 
   gensync@1.0.0-beta.2: {}
 

@@ -1,4 +1,4 @@
-import { fetchActiveTerms } from "#/sis.js";
+import { fetchActiveTermsAndDepartments } from "#/sis.js";
 import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import path from "path";
@@ -10,10 +10,11 @@ const CONFIG_FILE = path.resolve(__dirname, "config.json");
 
 interface Config {
   ActiveTerms: string[];
+  Departments: string[];
   LastChecked: string;
 }
 
-export async function getActiveTerms() {
+export async function getFromConfig(variable: keyof Config) {
   if (!existsSync(CONFIG_FILE)) {
     throw new Error("No file found at config.json. Please create a file.");
   }
@@ -24,18 +25,20 @@ export async function getActiveTerms() {
   const today = new Date().toISOString().split("T")[0];
 
   if (config.LastChecked !== today) {
-    config.ActiveTerms = await fetchActiveTerms();
+    const { activeTerms, departments } = await fetchActiveTermsAndDepartments();
+    config.ActiveTerms = activeTerms;
+    config.Departments = departments;
     config.LastChecked = today;
     await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
   }
 
-  return config.ActiveTerms;
+  return config[variable];
 }
 
 export async function getPastNYearsTermNames(n: number) {
   const terms: string[] = [];
 
-  const activeTerms = await getActiveTerms();
+  const activeTerms = await getFromConfig("ActiveTerms");
   const latestTerm = activeTerms[activeTerms.length - 1];
   let [season, yearString] = latestTerm.split(" ");
   const latestYear = parseInt(yearString, 10);

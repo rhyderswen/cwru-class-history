@@ -1,8 +1,5 @@
 {
-  "ActiveTerms": [
-    "Summer 2026",
-    "Fall 2026",
-    "Spring 2027"
-  ],
+  "ActiveTerms": ["Summer 2026", "Fall 2026", "Spring 2027"],
+  "Departments": [],
   "LastChecked": "2026-08-09"
 }

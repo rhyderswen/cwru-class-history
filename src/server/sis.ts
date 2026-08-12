@@ -1,4 +1,4 @@
-import { getActiveTerms } from "#/utils.js";
+import { getFromConfig } from "#/utils.js";
 import { createEmptyXlsx, isValidXlsx } from "#/xlsx.js";
 import { readdirSync, unlinkSync } from "fs";
 import path from "path";
@@ -35,7 +35,7 @@ export async function downloadCourseList(termLabel: string, subjectCode: string)
   await page.goto(START_URL, { waitUntil: "networkidle" });
 
   // Select term
-  if (!(await getActiveTerms()).includes(termLabel)) {
+  if (!(await getFromConfig("ActiveTerms")).includes(termLabel)) {
     // open the previous terms menu if the term is old
     const prevTermsMenu = page.locator('a[id^="DERIVED_SSR_FL_SSR_CSTRMPRV_GRP"]').first();
     await prevTermsMenu.waitFor({ state: "visible" });
@@ -121,7 +121,7 @@ async function checkIfRecentlyCached(subjectCode: string, termLabel: string) {
   const downloadedDay = new Date(file.split("_")[2].split(".")[0]);
   const diffInDays = (today.getTime() - downloadedDay.getTime()) / msPerDay;
 
-  if ((await getActiveTerms()).includes(termLabel)) {
+  if ((await getFromConfig("ActiveTerms")).includes(termLabel)) {
     if (diffInDays >= 7) {
       unlinkSync(filePath);
       return "";
@@ -137,7 +137,7 @@ async function checkIfRecentlyCached(subjectCode: string, termLabel: string) {
   return filePath;
 }
 
-export async function fetchActiveTerms() {
+export async function fetchActiveTermsAndDepartments() {
   console.log("Fetching active terms from SIS...");
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ acceptDownloads: true });
@@ -150,6 +150,22 @@ export async function fetchActiveTerms() {
 
   await page.goto(START_URL, { waitUntil: "networkidle" });
 
+  const activeTermObjects = await page.locator('a[id^="SSR_CSTRMCUR_VW_DESCR"]');
+  const activeTerms = await activeTermObjects.allTextContents();
   console.log("Finished fetching active terms from SIS!");
-  return page.locator('a[id^="SSR_CSTRMCUR_VW_DESCR"]').allTextContents();
+
+  const departmentLocator = page.locator('span[id^="CW_CLSRCH_WRK2_DESCR50"]');
+
+  await Promise.all([
+    departmentLocator.first().waitFor({ state: "visible" }),
+    activeTermObjects.last().click(),
+  ]);
+
+  const departments = await departmentLocator.allTextContents();
+  console.log("Finished fetching departments from SIS!");
+
+  return {
+    activeTerms: activeTerms,
+    departments: departments,
+  };
 }

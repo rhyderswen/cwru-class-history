@@ -1,6 +1,7 @@
 import { getCourseData } from "#/xlsx.js";
 import express from "express";
 import ViteExpress from "vite-express";
+import { getFromConfig } from "./utils.js";
 
 const app = express();
 const apiRouter = express.Router();
@@ -17,6 +18,11 @@ async function withRetry<T>(fn: () => Promise<T>, retries: number = 1): Promise<
   }
   throw lastError;
 }
+
+apiRouter.get("/getDepartments", async (req, res) => {
+  console.log("Recieved request for departments list");
+  res.send(await getFromConfig("Departments"));
+});
 
 apiRouter.get("/lookupDepartment/:id", async (req, res) => {
   console.log("Recieved request for department ID:", req.params.id);
