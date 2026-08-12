@@ -44,7 +44,7 @@ function Class({ courseCode, title, offerings }: CourseData) {
     return Array.from(semesters);
   }
 
-  const semesterButtons = offeredSemesters.map((item, index) => (
+  const semesterButtons = offeredSemesters.sort().map((item, index) => (
     <UnstyledButton
       key={item}
       className={"semesterSelectorControl"}
