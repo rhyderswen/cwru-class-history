@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 
 const MOCKDATA = [
   "CSDS - Computer Science",
-  "ECSE - Electrical, Computer and Systems Engineering ",
+  "ECSE - Electrical, Computer and Systems Engineering",
   "JAPN - Japanese",
   "MATH - Mathematics",
   "PHYS - Physics",

@@ -16,7 +16,8 @@
     "noEmit": true,
     "paths": {
       "@/*": ["./src/client/*"],
-      "#/*": ["./src/server/*"]
+      "#/*": ["./src/server/*"],
+      "~/*": ["./src/shared/*"]
     }
   },
   "include": ["src"]

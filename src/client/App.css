@@ -4,3 +4,40 @@
   margin: 0 auto;
   padding: 2rem;
 }
+
+.rotatable {
+  transition: transform 0.3s ease;
+}
+
+.rotated {
+  transform: rotate(-180deg);
+}
+
+.list {
+  position: relative;
+  margin-bottom: var(--mantine-spacing-md);
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.indicator {
+  background-color: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-gray-2);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.tab {
+  z-index: 1;
+  font-weight: 600;
+  transition: color 100ms ease;
+  color: var(--mantine-color-gray-7);
+
+  &:hover {
+    color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+    background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
+  }
+
+  &[data-active] {
+    color: var(--mantine-color-black);
+  }
+}

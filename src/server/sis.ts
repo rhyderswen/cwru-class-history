@@ -1,6 +1,5 @@
 import { getActiveTerms } from "#/utils.js";
-import { createEmptyXlsx } from "#/xlsx.js";
-import ExcelJS from "exceljs";
+import { createEmptyXlsx, isValidXlsx } from "#/xlsx.js";
 import { readdirSync, unlinkSync } from "fs";
 import path from "path";
 import { chromium, Download } from "playwright";
@@ -136,16 +135,6 @@ async function checkIfRecentlyCached(subjectCode: string, termLabel: string) {
   }
 
   return filePath;
-}
-
-async function isValidXlsx(filePath: string): Promise<boolean> {
-  try {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
-    return workbook.worksheets.length > 0;
-  } catch {
-    return false;
-  }
 }
 
 export async function fetchActiveTerms() {

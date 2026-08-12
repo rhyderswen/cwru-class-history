@@ -1,21 +1,103 @@
 import { CourseData } from "#/xlsx";
-import { Box, Collapse, Divider, Group, Paper, Text } from "@mantine/core";
+import ComponentListing from "@/components/ComponentListing";
+import {
+  Box,
+  Collapse,
+  Divider,
+  FloatingIndicator,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  UnstyledButton,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import { ComponentOrder } from "~/vars";
+import "./Class.css";
 
 function Class({ courseCode, title, offerings }: CourseData) {
   const [expanded, { toggle }] = useDisclosure(false);
+  const [rootSelectorRef, setRootSelectorRef] = useState<HTMLDivElement | null>(null);
+  const [controlsRefs, setControlsRefs] = useState<Record<string, HTMLButtonElement | null>>({});
+  const [selectorIndex, setSelectorIndex] = useState(0);
+  const [semester, setSemester] = useState("");
+
+  const setControlRef = (index: number) => (node: HTMLButtonElement) => {
+    controlsRefs[index] = node;
+    setControlsRefs(controlsRefs);
+  };
+
+  const offeredSemesters = getOfferedSemesters();
+
+  function getOfferedSemesters() {
+    const semesters = new Set<string>();
+
+    for (const componentOfferings of Object.values(offerings)) {
+      for (const term of Object.keys(componentOfferings)) {
+        const [semester] = term.split(" ");
+        semesters.add(semester);
+      }
+    }
+
+    return Array.from(semesters);
+  }
+
+  const semesterButtons = offeredSemesters.map((item, index) => (
+    <UnstyledButton
+      key={item}
+      className={"semesterSelectorControl"}
+      ref={setControlRef(index)}
+      onClick={() => {
+        setSelectorIndex(index);
+        setSemester(item);
+      }}
+      mod={{ active: selectorIndex === index }}
+    >
+      <span className={"semesterSelectorLabel"}>{item}</span>
+    </UnstyledButton>
+  ));
+
+  useEffect(() => {
+    if (!semester) {
+      setSemester(offeredSemesters[0]);
+    }
+  }, [offeredSemesters]);
 
   return (
     <Paper shadow="xs">
       <Box p="md" onClick={toggle} style={{ cursor: "pointer" }}>
         <Group justify="space-between" wrap="nowrap">
-          <Text flex="0 0 auto">{courseCode}</Text>
+          <Group flex="0 0 auto">
+            <CaretDownIcon className={"rotatable " + (expanded ? "rotated" : "rotatable")} />
+            <Text>{courseCode}</Text>
+          </Group>
           <Text truncate="end">{title}</Text>
         </Group>
       </Box>
       <Collapse expanded={expanded}>
         <Divider />
-        <Box p="md">spooky!</Box>
+        <Box className={"semesterSelectorRoot"} ref={setRootSelectorRef} mx="auto" my="xs">
+          {semesterButtons}
+          <FloatingIndicator
+            target={controlsRefs[selectorIndex]}
+            parent={rootSelectorRef}
+            className={"semesterSelectorIndicator"}
+          />
+        </Box>
+        <Stack m="md">
+          {Object.entries(offerings)
+            .sort(([a], [b]) => ComponentOrder.indexOf(a) - ComponentOrder.indexOf(b))
+            .map(([key, value]) => (
+              <ComponentListing
+                component={key}
+                offerings={value}
+                key={key}
+                selectedSemester={semester}
+              />
+            ))}
+        </Stack>
       </Collapse>
     </Paper>
   );

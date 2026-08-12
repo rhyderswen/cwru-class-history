@@ -1,28 +1,7 @@
 import { downloadCourseList } from "#/sis.js";
 import { getPastNYearsTermNames } from "#/utils.js";
 import ExcelJS from "exceljs";
-
-export enum CourseComponent {
-  CLINICAL = "Clinical",
-  COOP = "Co-op",
-  DISCUSSION = "Discussion",
-  DISSERTATION = "Dissertation",
-  FIELD = "Field Study",
-  INDEPENDENT = "Independent Study",
-  LAB = "Laboratory",
-  LECTURE = "Lecture",
-  PERFORMANCE = "Performance",
-  PHYSICALEDUCATION = "Physical Education",
-  PRACTICUM = "Practicum",
-  RECITAL = "Recital",
-  RECITATION = "Recitation",
-  RESEARCH = "Research",
-  SEMINAR = "Seminar",
-  STUDIO = "Studio",
-  THESIS = "Thesis",
-  WORKSHOP = "Workshop",
-  UNKNOWN = "Unknown",
-}
+import { CourseComponent } from "~/vars.js";
 
 export const COMPONENT_NAMES: Record<string, CourseComponent> = {
   CLN: CourseComponent.CLINICAL,
@@ -73,7 +52,7 @@ export type CourseRow = CourseInfo & OfferingInfo;
 export interface CourseData {
   courseCode: string;
   title: string;
-  offerings: Record<string, OfferingInfo[]>;
+  offerings: Record<string, Record<string, Omit<OfferingInfo, "component">[]>>;
 }
 
 export async function getCourseData(departmentId: string) {
@@ -96,7 +75,7 @@ export async function getCourseData(departmentId: string) {
   const courseMap = new Map<string, CourseData>();
 
   for (const { term, courseList } of courseData) {
-    for (const { catalogNumber, title, ...offeringInfo } of courseList) {
+    for (const { catalogNumber, title, component, ...offeringInfo } of courseList) {
       const courseCode = `${departmentId} ${catalogNumber}`;
 
       if (!courseMap.has(courseCode)) {
@@ -105,13 +84,19 @@ export async function getCourseData(departmentId: string) {
 
       const course = courseMap.get(courseCode)!;
 
-      if (!course.offerings[term]) {
-        course.offerings[term] = [];
+      if (!course.offerings[component]) {
+        course.offerings[component] = {};
       }
 
-      course.offerings[term].push(offeringInfo);
+      if (!course.offerings[component][term]) {
+        course.offerings[component][term] = [];
+      }
+
+      course.offerings[component][term].push(offeringInfo);
     }
   }
+
+  // Sort by component type
 
   return Array.from(courseMap.values()).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
 }
@@ -143,7 +128,7 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
       title: String(row.getCell(colIndex("CW_CLASS_TITLE")).value ?? ""),
       component: parseComponent(String(row.getCell(colIndex("SSR_COMPONENT")).value ?? "")),
       courseNumber: courseNumber,
-      days: String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim(),
+      days: shrinkDaysString(String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim()),
       time: String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? ""),
       room: String(row.getCell(colIndex("CW_MEETING_ROOM")).value ?? ""),
       instructor: String(row.getCell(colIndex("INSTR_NAME")).value ?? ""),
@@ -153,6 +138,33 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
   });
 
   return rows;
+}
+
+function shrinkDaysString(days: string) {
+  const splitDays = days.split(" ");
+
+  return splitDays
+    .map((day) => {
+      switch (day) {
+        case "Mon":
+          return "M";
+        case "Tue":
+          return "T";
+        case "Wed":
+          return "W";
+        case "Thu":
+          return "R";
+        case "Fri":
+          return "F";
+        case "Sat":
+          return "S";
+        case "Sun":
+          return "U";
+        default:
+          return day;
+      }
+    })
+    .join("");
 }
 
 export async function createEmptyXlsx(filePath: string) {
@@ -173,4 +185,14 @@ export async function createEmptyXlsx(filePath: string) {
   ]);
 
   await workbook.xlsx.writeFile(filePath);
+}
+
+export async function isValidXlsx(filePath: string): Promise<boolean> {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    return workbook.worksheets.length > 0;
+  } catch {
+    return false;
+  }
 }

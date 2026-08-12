@@ -33,9 +33,9 @@ apiRouter.get("/lookupDepartment/:id", async (req, res) => {
 
   let courseData;
   try {
-    courseData = await withRetry(() => getCourseData(departmentId.toUpperCase()), 1);
+    courseData = await withRetry(() => getCourseData(departmentId.toUpperCase()), 2);
   } catch (err) {
-    console.error("getCourseData failed after retry:", err);
+    console.error("getCourseData failed after retries:", err);
     return res.status(500).send("Internal server error while fetching course data");
   }
 
