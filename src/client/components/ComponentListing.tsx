@@ -36,7 +36,7 @@ function getDayColoredBadges(days: string, time: string) {
   if (days.length === 0)
     return (
       <Badge color="gray" ml={4}>
-        No time declared
+        No time specified
       </Badge>
     );
   if (days.length === 1) {
