@@ -44,18 +44,18 @@ function Class({ courseCode, title, offerings }: CourseData) {
     return Array.from(semesters);
   }
 
-  const semesterButtons = offeredSemesters.sort().map((item, index) => (
+  const semesterButtons = offeredSemesters.sort().map((sem, index) => (
     <UnstyledButton
-      key={item}
+      key={sem}
       className={"semesterSelectorControl"}
       ref={setControlRef(index)}
       onClick={() => {
         setSelectorIndex(index);
-        setSemester(item);
+        setSemester(sem);
       }}
       mod={{ active: selectorIndex === index }}
     >
-      <span className={"semesterSelectorLabel"}>{item}</span>
+      <span className={"semesterSelectorLabel"}>{sem}</span>
     </UnstyledButton>
   ));
 
@@ -71,9 +71,13 @@ function Class({ courseCode, title, offerings }: CourseData) {
         <Group justify="space-between" wrap="nowrap">
           <Group flex="0 0 auto">
             <CaretDownIcon className={"rotatable " + (expanded ? "rotated" : "rotatable")} />
-            <Text>{courseCode}</Text>
+            <Text id={courseCode} className="monospace" size="lg">
+              {courseCode}
+            </Text>
           </Group>
-          <Text truncate="end">{title}</Text>
+          <Text truncate="end" size="lg">
+            {title}
+          </Text>
         </Group>
       </Box>
       <Collapse expanded={expanded}>
@@ -88,12 +92,15 @@ function Class({ courseCode, title, offerings }: CourseData) {
         </Box>
         <Stack m="md">
           {Object.entries(offerings)
+            .filter(([, semesters]) =>
+              Object.keys(semesters).some((term) => term.split(" ")[0] === semester),
+            )
             .sort(([a], [b]) => ComponentOrder.indexOf(a) - ComponentOrder.indexOf(b))
-            .map(([key, value]) => (
+            .map(([component, semesters]) => (
               <ComponentListing
-                component={key}
-                offerings={value}
-                key={key}
+                component={component}
+                offerings={semesters}
+                key={component}
                 selectedSemester={semester}
               />
             ))}

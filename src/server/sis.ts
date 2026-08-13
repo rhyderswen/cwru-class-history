@@ -48,15 +48,24 @@ export async function downloadCourseList(termLabel: string, subjectCode: string)
   await page.waitForLoadState("networkidle");
 
   // Filter by subject code
-  const descriptionCell = page
-    .locator('span[id^="CW_CLSRCH_WRK2_DESCR50"]')
+  const departmentList = page.locator('span[id^="CW_CLSRCH_WRK2_DESCR50"]');
+  const descriptionCell = departmentList
     .filter({ hasText: new RegExp(`^${subjectCode}\\s*-`) })
     .first();
 
   try {
     await descriptionCell.waitFor({ state: "visible" });
   } catch (err) {
-    // department code not found
+    // if other departments have not loaded, then it's due to a timeout
+    if (!((await departmentList.count()) > 0)) {
+      await browser.close();
+      throw new Error(
+        `Department grid failed to load for ${termLabel} — possible page/navigation issue`,
+        { cause: err },
+      );
+    }
+
+    // departments loaded fine, subjectCode just isn't in it
     await browser.close();
     await createEmptyXlsx(savePath);
     console.log(`${subjectCode} is not listed in ${termLabel}.`);

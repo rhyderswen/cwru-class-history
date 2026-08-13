@@ -20,8 +20,9 @@ export interface TopbarProps {
 const Topbar = ({ children }: TopbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [_, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const searchBarRef = useRef<SearchBarHandle>(null);
+  const filterBarRef = useRef<SearchBarHandle>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["departments"],
@@ -37,7 +38,8 @@ const Topbar = ({ children }: TopbarProps) => {
     if (location.pathname === "/") {
       searchBarRef.current?.clear();
     }
-  }, [location]);
+    filterBarRef.current?.clear();
+  }, [location.pathname]);
 
   return (
     <div className="root">
@@ -89,6 +91,7 @@ const Topbar = ({ children }: TopbarProps) => {
                   "Input must be a 4-letter department code"
                 : null
               }
+              ref={filterBarRef}
             />
           </Box>
         </Group>

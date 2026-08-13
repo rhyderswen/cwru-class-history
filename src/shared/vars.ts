@@ -45,4 +45,4 @@ export const ComponentOrder: string[] = [
   CourseComponent.UNKNOWN,
 ];
 
-export const DayOrder = ["U", "M", "T", "W", "R", "F", "S"];
+export const DayOrder = ["U", "M", "T", "W", "R", "F", "S", "A", ""]; // "A" is async, "" is for no specified days

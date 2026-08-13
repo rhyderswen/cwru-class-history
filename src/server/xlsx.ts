@@ -1,3 +1,4 @@
+import { ProgressCallback } from "#/main.js";
 import { downloadCourseList } from "#/sis.js";
 import { getPastNYearsTermNames } from "#/utils.js";
 import ExcelJS from "exceljs";
@@ -55,19 +56,22 @@ export interface CourseData {
   offerings: Record<string, Record<string, Omit<OfferingInfo, "component">[]>>;
 }
 
-export async function getCourseData(departmentId: string) {
+export async function getCourseData(departmentId: string, onProgress?: ProgressCallback) {
   const terms = await getPastNYearsTermNames(4);
 
   const courseData = (
     await Promise.all(
       terms.map(async (term) => {
+        onProgress?.({ term, status: "started" });
         const savePath = await downloadCourseList(term, departmentId);
         if (savePath) {
           const courseList = await parseCourseListXlsx(savePath);
           if (courseList.length > 0) {
+            onProgress?.({ term, status: "finished" });
             return { term, courseList };
           }
         }
+        onProgress?.({ term, status: "finished" });
       }),
     )
   ).filter((item) => item !== undefined);
@@ -96,8 +100,6 @@ export async function getCourseData(departmentId: string) {
     }
   }
 
-  // Sort by component type
-
   return Array.from(courseMap.values()).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
 }
 
@@ -123,15 +125,21 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
       enrollmentTot = row.getCell(colIndex("ENRL_TOT")).value;
     }
 
+    const title = String(row.getCell(colIndex("CW_CLASS_TITLE")).value ?? "");
+    const room = String(row.getCell(colIndex("CW_MEETING_ROOM")).value ?? "");
+
     rows.push({
       catalogNumber: String(row.getCell(colIndex("CATALOG_NBR")).value ?? ""),
-      title: String(row.getCell(colIndex("CW_CLASS_TITLE")).value ?? ""),
+      title: title,
       component: parseComponent(String(row.getCell(colIndex("SSR_COMPONENT")).value ?? "")),
       courseNumber: courseNumber,
-      days: shrinkDaysString(String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim()),
+      days: shrinkDaysString(
+        String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim(),
+        room,
+      ),
       time: String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? ""),
-      room: String(row.getCell(colIndex("CW_MEETING_ROOM")).value ?? ""),
-      instructor: String(row.getCell(colIndex("INSTR_NAME")).value ?? ""),
+      room: room,
+      instructor: findInstructor(row, title, rows, colIndex),
       enrollmentCap: Number(enrollmentCap ?? -1),
       enrollmentTotal: Number(enrollmentTot ?? -1),
     });
@@ -140,31 +148,63 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
   return rows;
 }
 
-function shrinkDaysString(days: string) {
-  const splitDays = days.split(" ");
+function shrinkDaysString(days: string, room?: string) {
+  if (days.length > 0) {
+    const splitDays = days.trim().split(" ");
+    return splitDays
+      .map((day) => {
+        switch (day) {
+          case "Mon":
+            return "M";
+          case "Tue":
+            return "T";
+          case "Wed":
+            return "W";
+          case "Thu":
+            return "R";
+          case "Fri":
+            return "F";
+          case "Sat":
+            return "S";
+          case "Sun":
+            return "U";
+          default:
+            return day;
+        }
+      })
+      .join("");
+  } else if (room === "Online - Asynchronous") {
+    return "Asynchronous";
+  }
 
-  return splitDays
-    .map((day) => {
-      switch (day) {
-        case "Mon":
-          return "M";
-        case "Tue":
-          return "T";
-        case "Wed":
-          return "W";
-        case "Thu":
-          return "R";
-        case "Fri":
-          return "F";
-        case "Sat":
-          return "S";
-        case "Sun":
-          return "U";
-        default:
-          return day;
-      }
-    })
-    .join("");
+  return "";
+}
+
+function findInstructor(
+  row: ExcelJS.Row,
+  title: string,
+  rows: CourseRow[],
+  colIndex: (name: string) => number,
+) {
+  const instructorSplit = String(row.getCell(colIndex("INSTR_NAME")).value ?? "")
+    .split(",")
+    .reverse();
+
+  const instructor =
+    instructorSplit[0] ? `${instructorSplit[0].charAt(0)}. ${instructorSplit[1]}` : "";
+
+  const prevRow = rows[rows.length - 1];
+
+  if (!instructor) {
+    return prevRow?.instructor ?? "";
+  }
+
+  // retroactively fill in missing instructor names for previous rows with the same title
+  if (prevRow && prevRow.title === title && !prevRow.instructor) {
+    prevRow.instructor = instructor;
+  }
+
+  return instructor;
 }
 
 export async function createEmptyXlsx(filePath: string) {

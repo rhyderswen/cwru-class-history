@@ -3,6 +3,9 @@ import express from "express";
 import ViteExpress from "vite-express";
 import { getFromConfig } from "./utils.js";
 
+export type CourseDataEvent = { term: string; status: "started" | "finished" };
+export type ProgressCallback = (event: CourseDataEvent) => void;
+
 const app = express();
 const apiRouter = express.Router();
 
@@ -37,19 +40,39 @@ apiRouter.get("/lookupDepartment/:id", async (req, res) => {
     return res.status(400).send("Department ID can only be alphabetic characters");
   }
 
-  let courseData;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.flushHeaders?.();
+
+  const send = (event: string, data: unknown) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const onProgress = (event: CourseDataEvent) => send("progress", event);
+
+  let closed = false;
+  req.on("close", () => {
+    closed = true;
+  });
+
   try {
-    courseData = await withRetry(() => getCourseData(departmentId.toUpperCase()), 2);
+    const courseData = await withRetry(
+      () => getCourseData(departmentId.toUpperCase(), onProgress),
+      2,
+    );
+
+    if (closed) return;
+
+    send("done", courseData);
   } catch (err) {
     console.error("getCourseData failed after retries:", err);
-    return res.status(500).send("Internal server error while fetching course data");
+    if (!closed) send("failed", { message: "Internal server error while fetching course data" });
+  } finally {
+    if (!closed) res.end();
   }
-
-  if (!courseData || courseData.length === 0) {
-    return res.status(404).send("No course data found for the given department ID");
-  }
-
-  res.send(courseData);
 });
 
 app.use("/api", apiRouter);
