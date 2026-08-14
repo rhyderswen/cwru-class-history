@@ -1,6 +1,8 @@
+import { CourseData } from "#/libs/xlsx";
 import { CourseDataEvent } from "#/main";
-import { CourseData } from "#/xlsx";
 import Course from "@/components/Course";
+import CourseFloating from "@/components/CourseFloating";
+import { SearchPageProvider } from "@/contexts/searchPageContext";
 import { ActionIcon, Affix, Center, Progress, Stack, Text, Transition } from "@mantine/core";
 import { useWindowScroll } from "@mantine/hooks";
 import { ArrowUpIcon } from "@phosphor-icons/react";
@@ -87,54 +89,60 @@ function Search() {
   console.log(data);
 
   return (
-    <div className="App">
-      {isError ?
-        <Center py="xl" w="100%">
-          <Text ta="center" mb="lg">
-            {error instanceof Error ? error.message : "An unknown error occurred."}
-          </Text>
-        </Center>
-      : isLoading ?
-        <Center py="xl" w="100%">
-          <Stack align="center" w="100%" gap="xs">
+    <SearchPageProvider>
+      <title>{`${department?.toUpperCase() ?? "CWRU"} Course History`}</title>
+      <div className="App">
+        {isError ?
+          <Center py="xl" w="100%">
             <Text ta="center" mb="lg">
-              Fetching course data from SIS. If this hasn't been cached recently, this may take a
-              bit...
+              {error instanceof Error ? error.message : "An unknown error occurred."}
             </Text>
-            <Progress
-              value={progress.total > 0 ? (progress.done / progress.total) * 100 : 0}
-              w="60%"
-              animated
-            />
-            {progress.total > 0 && (
-              <Text size="sm" c="dimmed">
-                {progress.done} / {progress.total} semesters fetched
+          </Center>
+        : isLoading ?
+          <Center py="xl" w="100%">
+            <Stack align="center" w="100%" gap="xs">
+              <Text ta="center" mb="lg">
+                Fetching course data from SIS. If this hasn't been cached recently, this may take a
+                bit...
               </Text>
+              <Progress
+                value={progress.total > 0 ? (progress.done / progress.total) * 100 : 0}
+                w="60%"
+                animated
+              />
+              {progress.total > 0 && (
+                <Text size="sm" c="dimmed">
+                  {progress.done} / {progress.total} semesters fetched
+                </Text>
+              )}
+            </Stack>
+          </Center>
+        : <Stack align="stretch" w="100%" mx="auto" py="md" gap="sm">
+            {filterData(data)?.map((course: CourseData) => (
+              <Course
+                key={course.courseCode}
+                courseCode={course.courseCode}
+                title={course.title}
+                offerings={course.offerings}
+              />
+            ))}
+            {filterData(data).length === 0 && (
+              <Center>No courses found in the past 4 years.</Center>
             )}
           </Stack>
-        </Center>
-      : <Stack align="stretch" w="100%" mx="auto" py="md" gap="sm">
-          {filterData(data)?.map((course: CourseData) => (
-            <Course
-              key={course.courseCode}
-              courseCode={course.courseCode}
-              title={course.title}
-              offerings={course.offerings}
-            />
-          ))}
-          {filterData(data).length === 0 && <Center>No courses found in the past 4 years.</Center>}
-        </Stack>
-      }
-      <Affix position={{ bottom: 20, left: 20 }}>
-        <Transition transition="slide-up" mounted={scroll.y > 0}>
-          {(transitionStyles) => (
-            <ActionIcon style={transitionStyles} onClick={() => scrollTo({ y: 0 })} size="xl">
-              <ArrowUpIcon style={{ width: "70%", height: "70%" }} />
-            </ActionIcon>
-          )}
-        </Transition>
-      </Affix>
-    </div>
+        }
+        <Affix position={{ bottom: 20, left: 20 }}>
+          <Transition transition="slide-up" mounted={scroll.y > 0}>
+            {(transitionStyles) => (
+              <ActionIcon style={transitionStyles} onClick={() => scrollTo({ y: 0 })} size="xl">
+                <ArrowUpIcon style={{ width: "70%", height: "70%" }} />
+              </ActionIcon>
+            )}
+          </Transition>
+        </Affix>
+        <CourseFloating />
+      </div>
+    </SearchPageProvider>
   );
 }
 

@@ -1,4 +1,4 @@
-import { Combobox, Loader, TextInput, useCombobox } from "@mantine/core";
+import { CloseButton, Combobox, Loader, TextInput, useCombobox } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import fuzzysort from "fuzzysort";
 import { useImperativeHandle, useRef, useState } from "react";
@@ -35,6 +35,7 @@ function SearchBar({
     },
   });
   const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
 
   useImperativeHandle(ref, () => ({
@@ -49,13 +50,17 @@ function SearchBar({
     </Combobox.Option>
   ));
 
+  function processOnChange(value: string) {
+    onChange?.(value);
+    setValue(value);
+    form.setFieldValue("input", value);
+  }
+
   return (
     <form ref={formRef} onSubmit={form.onSubmit((values) => onSubmit?.(values.input))}>
       <Combobox
         onOptionSubmit={(optionValue) => {
-          onChange?.(optionValue);
-          setValue(optionValue);
-          form.setFieldValue("input", optionValue);
+          processOnChange(optionValue);
           combobox.closeDropdown();
           formRef.current?.requestSubmit();
         }}
@@ -68,10 +73,9 @@ function SearchBar({
             placeholder={placeholder || "Search..."}
             key={form.key("input")}
             value={value}
+            ref={inputRef}
             onChange={(event) => {
-              onChange?.(event.currentTarget.value);
-              setValue(event.currentTarget.value);
-              form.setFieldValue("input", event.currentTarget.value);
+              processOnChange(event.currentTarget.value);
               combobox.resetSelectedOption();
               combobox.openDropdown();
             }}
@@ -80,7 +84,21 @@ function SearchBar({
               combobox.openDropdown();
             }}
             onBlur={() => combobox.closeDropdown()}
-            rightSection={loading && <Loader size={18} />}
+            rightSectionPointerEvents={!loading && value ? "all" : undefined}
+            rightSection={
+              loading ? <Loader size={18} />
+              : value ?
+                <CloseButton
+                  aria-label="Clear input"
+                  onClick={() => {
+                    processOnChange("");
+                    combobox.resetSelectedOption();
+                    combobox.openDropdown();
+                    inputRef.current?.focus();
+                  }}
+                />
+              : undefined
+            }
             styles={{
               root: {
                 display: "flex",

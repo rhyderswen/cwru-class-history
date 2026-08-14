@@ -1,7 +1,7 @@
-import { getCourseData } from "#/xlsx.js";
+import { lookupDepartment } from "#/handlers/lookupDepartment.js";
+import { getFromConfig, openEventStream } from "#/libs/utils.js";
 import express from "express";
 import ViteExpress from "vite-express";
-import { getFromConfig } from "./utils.js";
 
 export type CourseDataEvent = { term: string; status: "started" | "finished" };
 export type ProgressCallback = (event: CourseDataEvent) => void;
@@ -45,18 +45,7 @@ apiRouter.get("/lookupDepartment/:id", async (req, res) => {
     return res.status(404).send("Department not found");
   }
 
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
-  res.flushHeaders?.();
-
-  const send = (event: string, data: unknown) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  };
-
-  const onProgress = (event: CourseDataEvent) => send("progress", event);
+  const { sendEvent, onProgress } = openEventStream(res);
 
   let closed = false;
   req.on("close", () => {
@@ -65,16 +54,17 @@ apiRouter.get("/lookupDepartment/:id", async (req, res) => {
 
   try {
     const courseData = await withRetry(
-      () => getCourseData(departmentId.toUpperCase(), onProgress),
+      () => lookupDepartment(departmentId.toUpperCase(), onProgress),
       2,
     );
 
     if (closed) return;
 
-    send("done", courseData);
+    sendEvent("done", courseData);
   } catch (err) {
     console.error("getCourseData failed after retries:", err);
-    if (!closed) send("failed", { message: "Internal server error while fetching course data" });
+    if (!closed)
+      sendEvent("failed", { message: "Internal server error while fetching course data" });
   } finally {
     if (!closed) res.end();
   }

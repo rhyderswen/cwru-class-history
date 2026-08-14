@@ -1,4 +1,4 @@
-import { CourseData } from "#/xlsx";
+import { CourseData } from "#/libs/xlsx";
 import CourseComponent from "@/components/CourseComponent";
 import {
   Box,
@@ -100,6 +100,7 @@ function Course({ courseCode, title, offerings }: CourseData) {
               <CourseComponent
                 component={component}
                 offerings={semesters}
+                courseInfo={{ catalogNumber: courseCode, title }}
                 key={component}
                 selectedSemester={semester}
               />

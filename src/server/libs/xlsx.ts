@@ -1,6 +1,3 @@
-import { ProgressCallback } from "#/main.js";
-import { downloadCourseList } from "#/sis.js";
-import { getPastNYearsTermNames } from "#/utils.js";
 import ExcelJS from "exceljs";
 import { CourseComponent } from "~/vars.js";
 
@@ -40,6 +37,7 @@ export interface CourseInfo {
 export interface OfferingInfo {
   component: CourseComponent;
   courseNumber: number;
+  sectionNumber: number;
   days: string;
   time: string;
   room: string;
@@ -48,59 +46,14 @@ export interface OfferingInfo {
   enrollmentTotal: number;
 }
 
+export type CourseProps = OfferingInfo & Omit<CourseInfo, "offerings"> & { term: string };
+
 export type CourseRow = CourseInfo & OfferingInfo;
 
 export interface CourseData {
   courseCode: string;
   title: string;
   offerings: Record<string, Record<string, Omit<OfferingInfo, "component">[]>>;
-}
-
-export async function getCourseData(departmentId: string, onProgress?: ProgressCallback) {
-  const terms = await getPastNYearsTermNames(4);
-
-  const courseData = (
-    await Promise.all(
-      terms.map(async (term) => {
-        onProgress?.({ term, status: "started" });
-        const savePath = await downloadCourseList(term, departmentId);
-        if (savePath) {
-          const courseList = await parseCourseListXlsx(savePath);
-          if (courseList.length > 0) {
-            onProgress?.({ term, status: "finished" });
-            return { term, courseList };
-          }
-        }
-        onProgress?.({ term, status: "finished" });
-      }),
-    )
-  ).filter((item) => item !== undefined);
-
-  const courseMap = new Map<string, CourseData>();
-
-  for (const { term, courseList } of courseData) {
-    for (const { catalogNumber, title, component, ...offeringInfo } of courseList) {
-      const courseCode = `${departmentId} ${catalogNumber}`;
-
-      if (!courseMap.has(courseCode)) {
-        courseMap.set(courseCode, { courseCode, title: title, offerings: {} });
-      }
-
-      const course = courseMap.get(courseCode)!;
-
-      if (!course.offerings[component]) {
-        course.offerings[component] = {};
-      }
-
-      if (!course.offerings[component][term]) {
-        course.offerings[component][term] = [];
-      }
-
-      course.offerings[component][term].push(offeringInfo);
-    }
-  }
-
-  return Array.from(courseMap.values()).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
 }
 
 export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]> {
@@ -133,6 +86,7 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
       title: title,
       component: parseComponent(String(row.getCell(colIndex("SSR_COMPONENT")).value ?? "")),
       courseNumber: courseNumber,
+      sectionNumber: Number(row.getCell(colIndex("CLASS_SECTION")).value ?? -1),
       days: shrinkDaysString(
         String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim(),
         room,
@@ -181,6 +135,11 @@ function shrinkDaysString(days: string, room?: string) {
 }
 
 function formatTimeString(time: string) {
+  if (time.trim() === "-") {
+    // When there is a day but no time, it's just a dash
+    return "";
+  }
+
   const [startRaw, endRaw] = time.split("-").map((s) => s.trim());
 
   if (!startRaw || !endRaw) {

@@ -16,3 +16,7 @@
 .monospace {
   font-family: "Roboto Mono", monospace;
 }
+
+.drag {
+  cursor: move;
+}

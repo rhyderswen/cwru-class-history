@@ -1,15 +1,16 @@
-import { OfferingInfo } from "#/xlsx";
+import { CourseInfo, OfferingInfo } from "#/libs/xlsx";
 import { Box, Paper, Text } from "@mantine/core";
-import { DayOrder } from "~/vars";
+import { CourseComponent as CourseComponentEnum, DayOrder } from "~/vars";
 import CourseOffering from "./CourseOffering";
 
 export interface ComponentProps {
   component: string;
   offerings: Record<string, Omit<OfferingInfo, "component">[]>;
+  courseInfo: Omit<CourseInfo, "offerings">;
   selectedSemester: string;
 }
 
-function CourseComponent({ component, offerings, selectedSemester }: ComponentProps) {
+function CourseComponent({ component, offerings, courseInfo, selectedSemester }: ComponentProps) {
   return (
     <Paper shadow="none" p="md" bg="var(--mantine-color-gray-0)" withBorder>
       <Text ta="center" mb="xs" fw={700} size="lg">
@@ -29,7 +30,14 @@ function CourseComponent({ component, offerings, selectedSemester }: ComponentPr
                 )
                 .map((offering) => (
                   <span key={offering.courseNumber}>
-                    <CourseOffering offering={offering} />
+                    <CourseOffering
+                      offering={{
+                        ...offering,
+                        ...courseInfo,
+                        component: component as CourseComponentEnum,
+                      }}
+                      selectedSemester={selectedSemester}
+                    />
                   </span>
                 ))}
             </Box>

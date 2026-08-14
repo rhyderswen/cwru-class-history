@@ -1,5 +1,5 @@
-import { getFromConfig } from "#/utils.js";
-import { createEmptyXlsx, isValidXlsx } from "#/xlsx.js";
+import { getFromConfig } from "#/libs/utils.js";
+import { createEmptyXlsx, isValidXlsx } from "#/libs/xlsx.js";
 import { readdirSync, unlinkSync } from "fs";
 import path from "path";
 import { chromium, Download } from "playwright";
@@ -10,7 +10,7 @@ const START_URL =
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const OUTPUT_DIR = path.resolve(__dirname, "downloads");
+const OUTPUT_DIR = path.resolve(__dirname, "../downloads");
 
 export async function downloadCourseList(termLabel: string, subjectCode: string) {
   const cachedFile = await checkIfRecentlyCached(subjectCode, termLabel);
@@ -59,15 +59,9 @@ export async function downloadCourseList(termLabel: string, subjectCode: string)
     // if other departments have not loaded, then it's due to a timeout
     if (!((await departmentList.count()) > 0)) {
       await browser.close();
-      throw new Error(
-        `Department grid failed to load for ${termLabel} — possible page/navigation issue`,
-        { cause: err },
-      );
+      throw new Error(`Department grid failed to load for ${termLabel}`, { cause: err });
     }
 
-    // departments loaded fine, subjectCode just isn't in it
-    await browser.close();
-    await createEmptyXlsx(savePath);
     console.log(`${subjectCode} is not listed in ${termLabel}.`);
     return "";
   }

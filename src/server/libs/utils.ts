@@ -1,4 +1,5 @@
-import { fetchActiveTermsAndDepartments } from "#/sis.js";
+import { fetchActiveTermsAndDepartments } from "#/libs/sis.js";
+import { CourseDataEvent } from "#/main.js";
 import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import path from "path";
@@ -6,7 +7,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const CONFIG_FILE = path.resolve(__dirname, "config.json");
+const CONFIG_FILE = path.resolve(__dirname, "../config.json");
 
 interface Config {
   ActiveTerms: string[];
@@ -62,4 +63,21 @@ export async function getPastNYearsTermNames(n: number) {
   }
 
   return terms;
+}
+
+export function openEventStream(res: any) {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.flushHeaders?.();
+
+  const sendEvent = (event: string, data: unknown) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const onProgress = (event: CourseDataEvent) => sendEvent("progress", event);
+
+  return { sendEvent, onProgress };
 }

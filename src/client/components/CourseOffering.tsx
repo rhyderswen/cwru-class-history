@@ -1,12 +1,14 @@
-import { OfferingInfo } from "#/xlsx";
-import { MantineStyleProp, Paper, Text } from "@mantine/core";
+import { CourseInfo, OfferingInfo } from "#/libs/xlsx";
+import { useSearchPage } from "@/contexts/searchPageContext";
+import { MantineStyleProp, Paper, Text, UnstyledButton } from "@mantine/core";
 
 export interface OfferingProps {
-  offering: Omit<OfferingInfo, "component">;
+  offering: OfferingInfo & Omit<CourseInfo, "offerings">;
+  selectedSemester: string;
 }
 
 function makeColoredPaper(
-  offering: Omit<OfferingInfo, "component">,
+  offering: OfferingInfo,
   color?: string,
   bg?: string,
   styleOverrides?: MantineStyleProp,
@@ -27,7 +29,7 @@ function makeColoredPaper(
       <Text w="fit-content" lh={1}>
         {textOverride ? textOverride : `${offering.days} ${offering.time}`}
       </Text>{" "}
-      <Text size="sm" lh={1} style={{ color: "gray" }}>
+      <Text size="sm" lh={1} c="gray">
         {offering.instructor && `${offering.instructor} | `}
         {getColoredNumber(offering.enrollmentCap - offering.enrollmentTotal)}/
         {offering.enrollmentCap} open
@@ -84,7 +86,7 @@ function getColoredNumber(num: number) {
   );
 }
 
-function getDayColoredPaper(offering: Omit<OfferingInfo, "component">) {
+function getDayColoredPaper(offering: OfferingInfo) {
   if (offering.days.length === 0) {
     return makeColoredPaper(
       offering,
@@ -111,8 +113,21 @@ function getDayColoredPaper(offering: Omit<OfferingInfo, "component">) {
   });
 }
 
-function CourseComponent({ offering }: OfferingProps) {
-  return getDayColoredPaper(offering);
+function CourseComponent({ offering, selectedSemester }: OfferingProps) {
+  const { setSelectedCourse } = useSearchPage();
+
+  return (
+    <UnstyledButton
+      onClick={() =>
+        setSelectedCourse({
+          ...offering,
+          term: selectedSemester,
+        })
+      }
+    >
+      {getDayColoredPaper(offering)}
+    </UnstyledButton>
+  );
 }
 
 export default CourseComponent;
