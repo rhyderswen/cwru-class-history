@@ -86,6 +86,9 @@ function SearchBar({
                 display: "flex",
                 flexDirection: "column",
               },
+              wrapper: {
+                marginBottom: 0,
+              },
               error: {
                 order: -1,
                 position: "absolute",

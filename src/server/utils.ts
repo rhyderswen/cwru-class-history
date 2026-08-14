@@ -14,7 +14,7 @@ interface Config {
   LastChecked: string;
 }
 
-export async function getFromConfig(variable: keyof Config) {
+export async function getFromConfig<K extends keyof Config>(variable: K): Promise<Config[K]> {
   if (!existsSync(CONFIG_FILE)) {
     throw new Error("No file found at config.json. Please create a file.");
   }

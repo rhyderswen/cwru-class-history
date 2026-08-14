@@ -137,7 +137,7 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
         String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim(),
         room,
       ),
-      time: String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? ""),
+      time: formatTimeString(String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? "")),
       room: room,
       instructor: findInstructor(row, title, rows, colIndex),
       enrollmentCap: Number(enrollmentCap ?? -1),
@@ -178,6 +178,21 @@ function shrinkDaysString(days: string, room?: string) {
   }
 
   return "";
+}
+
+function formatTimeString(time: string) {
+  const [startRaw, endRaw] = time.split("-").map((s) => s.trim());
+
+  if (!startRaw || !endRaw) {
+    return time;
+  }
+
+  if (startRaw.slice(-2) === endRaw.slice(-2)) {
+    // if both AM/PM, drop the first one
+    return `${startRaw.slice(0, -3)}-${endRaw}`;
+  }
+
+  return time;
 }
 
 function findInstructor(

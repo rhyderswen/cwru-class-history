@@ -40,6 +40,11 @@ apiRouter.get("/lookupDepartment/:id", async (req, res) => {
     return res.status(400).send("Department ID can only be alphabetic characters");
   }
 
+  const departments = await getFromConfig("Departments");
+  if (!departments.some((d: string) => d.startsWith(departmentId.toUpperCase()))) {
+    return res.status(404).send("Department not found");
+  }
+
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",

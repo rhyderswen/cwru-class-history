@@ -1,6 +1,6 @@
 import { CourseDataEvent } from "#/main";
 import { CourseData } from "#/xlsx";
-import Class from "@/components/Class";
+import Course from "@/components/Course";
 import { ActionIcon, Affix, Center, Progress, Stack, Text, Transition } from "@mantine/core";
 import { useWindowScroll } from "@mantine/hooks";
 import { ArrowUpIcon } from "@phosphor-icons/react";
@@ -16,8 +16,24 @@ function Search() {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["department", department],
-    queryFn: () =>
-      new Promise<CourseData[]>((resolve, reject) => {
+    queryFn: async () => {
+      const res = await fetch(`/api/lookupDepartment/${department}`, { method: "HEAD" });
+      if (!res.ok) {
+        let err;
+        if (res.status === 404) {
+          err = new Error("Department not found") as Error & {
+            status?: number;
+          };
+        } else {
+          err = new Error(`Error ${res.status}: ${res.statusText}`) as Error & {
+            status?: number;
+          };
+        }
+        err.status = res.status;
+        throw err;
+      }
+
+      return new Promise<CourseData[]>((resolve, reject) => {
         const seen = new Set<string>();
         const done = new Set<string>();
         setProgress({ done: 0, total: 0 });
@@ -45,7 +61,14 @@ function Search() {
           reject(new Error("Connection to server lost"));
           source.close();
         });
-      }),
+      });
+    },
+    retry: (failureCount, error) => {
+      const status = (error as Error & { status?: number }).status;
+      // Don't retry client errors (4xx)
+      if (status && status >= 400 && status < 500) return false;
+      return failureCount < 3;
+    },
   });
 
   function filterData(data: CourseData[] | undefined): CourseData[] {
@@ -65,7 +88,13 @@ function Search() {
 
   return (
     <div className="App">
-      {isLoading ?
+      {isError ?
+        <Center py="xl" w="100%">
+          <Text ta="center" mb="lg">
+            {error instanceof Error ? error.message : "An unknown error occurred."}
+          </Text>
+        </Center>
+      : isLoading ?
         <Center py="xl" w="100%">
           <Stack align="center" w="100%" gap="xs">
             <Text ta="center" mb="lg">
@@ -86,7 +115,7 @@ function Search() {
         </Center>
       : <Stack align="stretch" w="100%" mx="auto" py="md" gap="sm">
           {filterData(data)?.map((course: CourseData) => (
-            <Class
+            <Course
               key={course.courseCode}
               courseCode={course.courseCode}
               title={course.title}

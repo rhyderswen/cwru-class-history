@@ -61,13 +61,17 @@ const Topbar = ({ children }: TopbarProps) => {
             <SearchBar
               options={data}
               loading={isLoading}
-              onSubmit={(value) => navigate(`/search/${value.substring(0, 4)}`)}
+              onSubmit={(value) => navigate(`/search/${value.substring(0, 4).toUpperCase()}`)}
               placeholder="Search for a department..."
-              validation={(value) =>
-                !/^[a-zA-Z]{4}$/.test(value.substring(0, 4)) ?
-                  "Input must be a 4-letter department code"
-                : null
-              }
+              validation={(value) => {
+                if (!data?.some((d: string) => d.startsWith(value.substring(0, 4).toUpperCase()))) {
+                  return "Not a valid department";
+                }
+                if (!/^[a-zA-Z]{4}$/.test(value.substring(0, 4))) {
+                  return "Input must be a 4-letter department code";
+                }
+                return null;
+              }}
               ref={searchBarRef}
             />
           </Box>
@@ -85,11 +89,6 @@ const Topbar = ({ children }: TopbarProps) => {
               placeholder="Filter classes..."
               onChange={(value) =>
                 value !== "" ? setSearchParams({ q: value }) : setSearchParams({})
-              }
-              validation={(value) =>
-                !/^[a-zA-Z]{4}$/.test(value.substring(0, 4)) ?
-                  "Input must be a 4-letter department code"
-                : null
               }
               ref={filterBarRef}
             />

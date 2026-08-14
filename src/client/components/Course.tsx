@@ -1,5 +1,5 @@
 import { CourseData } from "#/xlsx";
-import ComponentListing from "@/components/ComponentListing";
+import CourseComponent from "@/components/CourseComponent";
 import {
   Box,
   Collapse,
@@ -15,9 +15,9 @@ import { useDisclosure } from "@mantine/hooks";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { ComponentOrder } from "~/vars";
-import "./Class.css";
+import "./Course.css";
 
-function Class({ courseCode, title, offerings }: CourseData) {
+function Course({ courseCode, title, offerings }: CourseData) {
   const [expanded, { toggle }] = useDisclosure(false);
   const [rootSelectorRef, setRootSelectorRef] = useState<HTMLDivElement | null>(null);
   const [controlsRefs, setControlsRefs] = useState<Record<string, HTMLButtonElement | null>>({});
@@ -97,7 +97,7 @@ function Class({ courseCode, title, offerings }: CourseData) {
             )
             .sort(([a], [b]) => ComponentOrder.indexOf(a) - ComponentOrder.indexOf(b))
             .map(([component, semesters]) => (
-              <ComponentListing
+              <CourseComponent
                 component={component}
                 offerings={semesters}
                 key={component}
@@ -110,4 +110,4 @@ function Class({ courseCode, title, offerings }: CourseData) {
   );
 }
 
-export default Class;
+export default Course;
