@@ -1,5 +1,5 @@
 import { CourseData } from "#/libs/xlsx";
-import { CourseDataEvent } from "#/main";
+import { CourseDataEvent, QueuedEvent } from "#/main";
 import Course from "@/components/Course";
 import CourseFloating from "@/components/CourseFloating";
 import { SearchPageProvider } from "@/contexts/searchPageContext";
@@ -15,32 +15,22 @@ function Search() {
   const { department } = useParams();
   const [scroll, scrollTo] = useWindowScroll();
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [queued, setQueued] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["department", department],
-    queryFn: async () => {
-      const res = await fetch(`/api/lookupDepartment/${department}`, { method: "HEAD" });
-      if (!res.ok) {
-        let err;
-        if (res.status === 404) {
-          err = new Error("Department not found") as Error & {
-            status?: number;
-          };
-        } else {
-          err = new Error(`Error ${res.status}: ${res.statusText}`) as Error & {
-            status?: number;
-          };
-        }
-        err.status = res.status;
-        throw err;
-      }
-
-      return new Promise<CourseData[]>((resolve, reject) => {
+    queryFn: () =>
+      new Promise<CourseData[]>((resolve, reject) => {
         const seen = new Set<string>();
         const done = new Set<string>();
         setProgress({ done: 0, total: 0 });
 
         const source = new EventSource(`/api/lookupDepartment/${department}`);
+
+        source.addEventListener("queued", (e) => {
+          const event: QueuedEvent = JSON.parse(e.data);
+          setQueued(event.isQueued);
+        });
 
         source.addEventListener("progress", (e) => {
           const event: CourseDataEvent = JSON.parse(e.data);
@@ -55,7 +45,10 @@ function Search() {
         });
 
         source.addEventListener("failed", (e) => {
-          reject(new Error(JSON.parse(e.data).message ?? "Failed to fetch"));
+          const { status, message } = JSON.parse(e.data);
+          const err = new Error(message ?? "Failed to fetch") as Error & { status?: number };
+          err.status = status;
+          reject(err);
           source.close();
         });
 
@@ -63,8 +56,7 @@ function Search() {
           reject(new Error("Connection to server lost"));
           source.close();
         });
-      });
-    },
+      }),
     retry: (failureCount, error) => {
       const status = (error as Error & { status?: number }).status;
       // Don't retry client errors (4xx)
@@ -113,6 +105,12 @@ function Search() {
               {progress.total > 0 && (
                 <Text size="sm" c="dimmed">
                   {progress.done} / {progress.total} semesters fetched
+                </Text>
+              )}
+              {queued && (
+                <Text size="sm" c="dimmed">
+                  The server is currently busy with another request. Your request has been queued.
+                  Please do not refresh the page.
                 </Text>
               )}
             </Stack>

@@ -65,7 +65,7 @@ export async function getPastNYearsTermNames(n: number) {
   return terms;
 }
 
-export function openEventStream(res: any) {
+export function openEventStream(res: any, req: any) {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
@@ -73,11 +73,27 @@ export function openEventStream(res: any) {
   });
   res.flushHeaders?.();
 
+  let closed = false;
+  req.on("close", () => {
+    closed = true;
+  });
+
   const sendEvent = (event: string, data: unknown) => {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
-  const onProgress = (event: CourseDataEvent) => sendEvent("progress", event);
+  const onProgress = (event: CourseDataEvent) => {
+    if (closed) return;
+    sendEvent("progress", event);
+  };
 
-  return { sendEvent, onProgress };
+  const fail = (status: number, message: string) => {
+    if (closed) return;
+    sendEvent("failed", { status, message });
+    res.end();
+  };
+
+  const isClosed = () => closed;
+
+  return { sendEvent, onProgress, fail, isClosed };
 }

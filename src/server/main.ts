@@ -2,12 +2,16 @@ import { lookupDepartment } from "#/handlers/lookupDepartment.js";
 import { getFromConfig, openEventStream } from "#/libs/utils.js";
 import express from "express";
 import ViteExpress from "vite-express";
+import { Semaphore } from "./libs/semaphore.js";
 
 export type CourseDataEvent = { term: string; status: "started" | "finished" };
+export type QueuedEvent = { isQueued: boolean };
 export type ProgressCallback = (event: CourseDataEvent) => void;
 
 const app = express();
 const apiRouter = express.Router();
+
+const lookupDepartmentSemaphore = new Semaphore(1);
 
 async function withRetry<T>(fn: () => Promise<T>, retries: number = 1): Promise<T> {
   let lastError: unknown;
@@ -30,43 +34,38 @@ apiRouter.get("/getDepartments", async (req, res) => {
 apiRouter.get("/lookupDepartment/:id", async (req, res) => {
   console.log("Recieved request for department ID:", req.params.id);
   const departmentId = req.params.id;
-  if (!departmentId) {
-    return res.status(400).send("Department ID is required");
-  }
-  if (departmentId.length !== 4) {
-    return res.status(400).send("Department ID must be 4 characters long");
-  }
-  if (!/^[a-zA-Z]+$/.test(departmentId)) {
-    return res.status(400).send("Department ID can only be alphabetic characters");
-  }
+
+  const { sendEvent, onProgress, fail, isClosed } = openEventStream(res, req);
+
+  if (!departmentId) return fail(400, "Department ID is required");
+  if (departmentId.length !== 4) return fail(400, "Department ID must be 4 characters long");
+  if (!/^[a-zA-Z]+$/.test(departmentId))
+    return fail(400, "Department ID can only be alphabetic characters");
 
   const departments = await getFromConfig("Departments");
-  if (!departments.some((d: string) => d.startsWith(departmentId.toUpperCase()))) {
-    return res.status(404).send("Department not found");
-  }
+  if (!departments.some((d: string) => d.startsWith(departmentId.toUpperCase())))
+    return fail(404, "Department not found");
 
-  const { sendEvent, onProgress } = openEventStream(res);
-
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
+  const { ready, release } = lookupDepartmentSemaphore.acquire(
+    () => sendEvent("queued", { isQueued: true }),
+    () => sendEvent("queued", { isQueued: false }),
+  );
 
   try {
     const courseData = await withRetry(
-      () => lookupDepartment(departmentId.toUpperCase(), onProgress),
+      () => lookupDepartment(departmentId.toUpperCase(), onProgress, ready),
       2,
     );
 
-    if (closed) return;
+    if (isClosed()) return;
 
     sendEvent("done", courseData);
+    res.end();
   } catch (err) {
     console.error("getCourseData failed after retries:", err);
-    if (!closed)
-      sendEvent("failed", { message: "Internal server error while fetching course data" });
+    fail(500, "Internal server error while fetching course data");
   } finally {
-    if (!closed) res.end();
+    release();
   }
 });
 

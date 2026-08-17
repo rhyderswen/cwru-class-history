@@ -4,15 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 
-const MOCKDATA = [
-  "CSDS - Computer Science",
-  "ECSE - Electrical, Computer and Systems Engineering",
-  "JAPN - Japanese",
-  "MATH - Mathematics",
-  "PHYS - Physics",
-  "COGS - Cognitive Science",
-];
-
 export interface TopbarProps {
   children: React.ReactNode;
 }
@@ -20,7 +11,7 @@ export interface TopbarProps {
 const Topbar = ({ children }: TopbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchBarRef = useRef<SearchBarHandle>(null);
   const filterBarRef = useRef<SearchBarHandle>(null);
 
@@ -40,6 +31,12 @@ const Topbar = ({ children }: TopbarProps) => {
     }
     filterBarRef.current?.clear();
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/search/") && searchParams.get("q")) {
+      filterBarRef.current?.setValue(searchParams.get("q") || "");
+    }
+  }, []);
 
   return (
     <div className="root">

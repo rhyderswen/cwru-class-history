@@ -45,4 +45,15 @@ export const ComponentOrder: string[] = [
   CourseComponent.UNKNOWN,
 ];
 
+export const DaysOfWeek: Record<string, string> = {
+  M: "Monday",
+  T: "Tuesday",
+  W: "Wednesday",
+  R: "Thursday",
+  F: "Friday",
+  S: "Saturday",
+  U: "Sunday",
+  A: "Asynchronous",
+};
+
 export const DayOrder = ["U", "M", "T", "W", "R", "F", "S", "A", ""]; // "A" is async, "" is for no specified days

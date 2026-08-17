@@ -5,6 +5,7 @@ import { useImperativeHandle, useRef, useState } from "react";
 
 export interface SearchBarHandle {
   clear: () => void;
+  setValue: (value: string) => void;
 }
 
 export interface SearchBarProps {
@@ -41,6 +42,9 @@ function SearchBar({
   useImperativeHandle(ref, () => ({
     clear: () => {
       setValue("");
+    },
+    setValue: (value: string) => {
+      setValue(value);
     },
   }));
 

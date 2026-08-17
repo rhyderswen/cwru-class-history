@@ -36,7 +36,7 @@ function CourseComponent({ component, offerings, courseInfo, selectedSemester }:
                         ...courseInfo,
                         component: component as CourseComponentEnum,
                       }}
-                      selectedSemester={selectedSemester}
+                      term={semester}
                     />
                   </span>
                 ))}

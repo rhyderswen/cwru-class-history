@@ -12,8 +12,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const OUTPUT_DIR = path.resolve(__dirname, "../downloads");
 
-export async function downloadCourseList(termLabel: string, subjectCode: string) {
-  const cachedFile = await checkIfRecentlyCached(subjectCode, termLabel);
+export async function downloadCourseList(
+  termLabel: string,
+  subjectCode: string,
+  semaphoreReady?: Promise<void>,
+) {
+  let cachedFile = await checkIfRecentlyCached(subjectCode, termLabel);
+  if (cachedFile) {
+    return cachedFile;
+  }
+
+  await semaphoreReady;
+
+  // Check again because another request may have downloaded the file while waiting for the semaphore
+  cachedFile = await checkIfRecentlyCached(subjectCode, termLabel);
   if (cachedFile) {
     return cachedFile;
   }

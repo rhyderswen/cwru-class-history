@@ -1,10 +1,11 @@
 import { CourseInfo, OfferingInfo } from "#/libs/xlsx";
 import { useSearchPage } from "@/contexts/searchPageContext";
+import { getColoredNumber, getDayColor } from "@/libs/utils";
 import { MantineStyleProp, Paper, Text, UnstyledButton } from "@mantine/core";
 
 export interface OfferingProps {
   offering: OfferingInfo & Omit<CourseInfo, "offerings">;
-  selectedSemester: string;
+  term: string;
 }
 
 function makeColoredPaper(
@@ -38,54 +39,6 @@ function makeColoredPaper(
   );
 }
 
-function getDayColor(day: string, shade: number = 7): string {
-  if (day.length !== 1) return "gray";
-
-  switch (day) {
-    case "M":
-      return `var(--mantine-color-grape-${shade})`;
-    case "T":
-      return `var(--mantine-color-teal-${shade})`;
-    case "W":
-      return `var(--mantine-color-pink-${shade})`;
-    case "R":
-      return `var(--mantine-color-indigo-${shade})`;
-    case "F":
-      return `var(--mantine-color-orange-${shade})`;
-    case "S":
-      return `var(--mantine-color-red-${shade})`;
-    case "U":
-      return `var(--mantine-color-red-${shade})`;
-    case "A": // Async
-    default:
-      return `var(--mantine-color-gray-${shade})`;
-  }
-}
-
-function getColoredNumber(num: number) {
-  if (num <= 1) {
-    return (
-      <Text span c="red" inherit fw={700}>
-        {num}
-      </Text>
-    );
-  }
-
-  if (num <= 5) {
-    return (
-      <Text span c="yellow" inherit fw={700}>
-        {num}
-      </Text>
-    );
-  }
-
-  return (
-    <Text span inherit>
-      {num}
-    </Text>
-  );
-}
-
 function getDayColoredPaper(offering: OfferingInfo) {
   if (offering.days.length === 0) {
     return makeColoredPaper(
@@ -113,7 +66,7 @@ function getDayColoredPaper(offering: OfferingInfo) {
   });
 }
 
-function CourseComponent({ offering, selectedSemester }: OfferingProps) {
+function CourseComponent({ offering, term }: OfferingProps) {
   const { setSelectedCourse } = useSearchPage();
 
   return (
@@ -121,7 +74,7 @@ function CourseComponent({ offering, selectedSemester }: OfferingProps) {
       onClick={() =>
         setSelectedCourse({
           ...offering,
-          term: selectedSemester,
+          term: term,
         })
       }
     >
