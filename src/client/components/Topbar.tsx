@@ -1,8 +1,9 @@
 import SearchBar, { SearchBarHandle } from "@/components/SearchBar";
+import { useURLParams } from "@/contexts/urlParamContext";
 import { Box, Group, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 
 export interface TopbarProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ export interface TopbarProps {
 const Topbar = ({ children }: TopbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { searchParams, updateParam } = useURLParams();
   const searchBarRef = useRef<SearchBarHandle>(null);
   const filterBarRef = useRef<SearchBarHandle>(null);
 
@@ -84,9 +85,7 @@ const Topbar = ({ children }: TopbarProps) => {
           >
             <SearchBar
               placeholder="Filter classes..."
-              onChange={(value) =>
-                value !== "" ? setSearchParams({ q: value }) : setSearchParams({})
-              }
+              onChange={(value) => updateParam("q", value)}
               ref={filterBarRef}
             />
           </Box>

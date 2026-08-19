@@ -10,12 +10,16 @@ import {
   RouterProvider,
 } from "react-router";
 import "./App.css";
+import { SearchPageProvider } from "./contexts/searchPageContext";
+import { URLParamProvider } from "./contexts/urlParamContext";
 
 function Layout() {
   return (
-    <Topbar>
-      <Outlet />
-    </Topbar>
+    <URLParamProvider>
+      <Topbar>
+        <Outlet />
+      </Topbar>
+    </URLParamProvider>
   );
 }
 
@@ -46,7 +50,11 @@ const router = createBrowserRouter([
           },
           {
             path: ":department", // matches /schedule/:department
-            element: <Search />,
+            element: (
+              <SearchPageProvider>
+                <Search />
+              </SearchPageProvider>
+            ),
             loader: departmentLoader,
           },
         ],

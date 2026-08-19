@@ -1,4 +1,4 @@
-.semesterSelectorRoot {
+.selectorRoot {
   position: relative;
   background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
   width: fit-content;
@@ -7,7 +7,7 @@
   border: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
 }
 
-.semesterSelectorControl {
+.selectorControl {
   padding: 7px 12px;
   line-height: 1;
   color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2));
@@ -26,12 +26,12 @@
   }
 }
 
-.semesterSelectorLabel {
+.selectorLabel {
   position: relative;
   z-index: 1;
 }
 
-.semesterSelectorIndicator {
+.selectorIndicator {
   background-color: var(--mantine-primary-color-filled);
   border-radius: var(--mantine-radius-md);
 }

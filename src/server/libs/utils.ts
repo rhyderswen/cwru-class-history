@@ -1,9 +1,9 @@
 import { fetchActiveTermsAndDepartments } from "#/libs/sis.js";
 import { CourseDataEvent } from "#/main.js";
-import { existsSync } from "fs";
-import { readFile, writeFile } from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
+import { existsSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +21,12 @@ export async function getFromConfig<K extends keyof Config>(variable: K): Promis
   }
 
   const raw = await readFile(CONFIG_FILE, "utf-8");
-  const config = JSON.parse(raw) as Config;
+  let config;
+  try {
+    config = JSON.parse(raw) as Config;
+  } catch {
+    config = { ActiveTerms: [], Departments: [], LastChecked: "" };
+  }
 
   const today = new Date().toISOString().split("T")[0];
 

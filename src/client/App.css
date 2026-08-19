@@ -20,3 +20,7 @@
 .drag {
   cursor: move;
 }
+
+.pointer {
+  cursor: pointer;
+}

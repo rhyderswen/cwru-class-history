@@ -2,20 +2,34 @@ import { CourseData } from "#/libs/xlsx";
 import { CourseDataEvent, QueuedEvent } from "#/main";
 import Course from "@/components/Course";
 import CourseFloating from "@/components/CourseFloating";
-import { SearchPageProvider } from "@/contexts/searchPageContext";
-import { ActionIcon, Affix, Center, Progress, Stack, Text, Transition } from "@mantine/core";
+import Selector from "@/components/Selector";
+import { useSearchPage } from "@/contexts/searchPageContext";
+import { useURLParams } from "@/contexts/urlParamContext";
+import {
+  ActionIcon,
+  Affix,
+  Button,
+  Center,
+  CloseButton,
+  Group,
+  Progress,
+  Stack,
+  Text,
+  Transition,
+} from "@mantine/core";
 import { useWindowScroll } from "@mantine/hooks";
 import { ArrowUpIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useParams, useSearchParams } from "react-router";
+import { useParams } from "react-router";
 
 function Search() {
-  const [searchParams] = useSearchParams();
+  const { searchParams, updateParam } = useURLParams();
   const { department } = useParams();
   const [scroll, scrollTo] = useWindowScroll();
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [queued, setQueued] = useState(false);
+  const { collapseAll } = useSearchPage();
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["department", department],
@@ -67,23 +81,55 @@ function Search() {
 
   function filterData(data: CourseData[] | undefined): CourseData[] {
     const searchInput = searchParams.get("q") ?? "";
+    const semFilter = searchParams.get("sem") ?? "";
 
     if (!data) return [];
-    if (!searchInput) return data;
 
-    return data.filter(
-      (course) =>
-        course.courseCode.toLowerCase().includes(searchInput.toLowerCase()) ||
-        course.title.toLowerCase().includes(searchInput.toLowerCase()),
-    );
+    let filteredData = data;
+    if (searchInput) {
+      filteredData = data.filter(
+        (course) =>
+          course.courseCode.toLowerCase().includes(searchInput.toLowerCase()) ||
+          course.title.toLowerCase().includes(searchInput.toLowerCase()),
+      );
+    }
+
+    if (semFilter) {
+      filteredData = filteredData.filter((course) =>
+        Object.values(course.offerings).some((term) =>
+          Object.keys(term).some((sem) => sem.startsWith(semFilter)),
+        ),
+      );
+    }
+
+    return filteredData;
   }
 
   console.log(data);
 
   return (
-    <SearchPageProvider>
+    <>
       <title>{`${department?.toUpperCase() ?? "CWRU"} Course History`}</title>
       <div className="App">
+        <Group justify="space-between">
+          <Group w="fit-content" gap={4}>
+            <Selector
+              options={["Fall", "Spring", "Summer"]}
+              setSelected={(sem) => updateParam("sem", sem)}
+              hideIndicator={searchParams.get("sem") === null}
+            />
+            {searchParams.get("sem") && <CloseButton onClick={() => updateParam("sem", "")} />}
+          </Group>
+          <Button
+            variant="outline"
+            onClick={collapseAll}
+            c="gray.7"
+            bd="1px solid var(--mantine-color-gray-2)"
+            bg="gray.0"
+          >
+            Collapse All
+          </Button>
+        </Group>
         {isError ?
           <Center py="xl" w="100%">
             <Text ta="center" mb="lg">
@@ -115,7 +161,7 @@ function Search() {
               )}
             </Stack>
           </Center>
-        : <Stack align="stretch" w="100%" mx="auto" py="md" gap="sm">
+        : <Stack align="stretch" w="100%" mx="auto" gap="sm">
             {filterData(data)?.map((course: CourseData) => (
               <Course
                 key={course.courseCode}
@@ -140,7 +186,7 @@ function Search() {
         </Affix>
         <CourseFloating />
       </div>
-    </SearchPageProvider>
+    </>
   );
 }
 

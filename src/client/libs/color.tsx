@@ -73,3 +73,20 @@ export function shortenedDaysToColors(days: string) {
     </>
   );
 }
+
+export function getCourseCodeColor(courseCode: string) {
+  const num = Number(courseCode.split(" ")[1].slice(0, 3));
+
+  let color: string;
+  if (num < 100) color = "gray";
+  else if (num < 200) color = "green.9";
+  else if (num < 300) color = "yellow.9";
+  else if (num < 400) color = "red.9";
+  else if (num < 500) color = "violet.9";
+  else if (num < 600) color = "cyan.9";
+  else if (num < 700) color = "pink.9";
+  else if (num < 800) color = "black";
+  else color = "gray";
+
+  return color;
+}

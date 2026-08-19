@@ -1,6 +1,6 @@
 import { CourseInfo, OfferingInfo } from "#/libs/xlsx";
 import { useSearchPage } from "@/contexts/searchPageContext";
-import { getColoredNumber, getDayColor } from "@/libs/utils";
+import { getColoredNumber, getDayColor } from "@/libs/color";
 import { MantineStyleProp, Paper, Text, UnstyledButton } from "@mantine/core";
 
 export interface OfferingProps {
