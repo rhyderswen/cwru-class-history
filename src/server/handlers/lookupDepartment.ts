@@ -26,6 +26,7 @@ export async function lookupDepartment(
           const savePath = await downloadCourseList(term, departmentId, semaphoreReady);
           if (savePath) {
             const courseList = await parseCourseListXlsx(savePath);
+            onProgress?.({ term, status: "finished" });
             if (courseList.length > 0) {
               return { term, courseList };
             }
@@ -34,7 +35,6 @@ export async function lookupDepartment(
           console.error(`Failed to download/parse ${departmentId} ${term}:`, err);
         } finally {
           release();
-          onProgress?.({ term, status: "finished" });
         }
       }),
     )

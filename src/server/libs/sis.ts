@@ -39,7 +39,7 @@ export async function downloadCourseList(
   const context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();
 
-  page.setDefaultTimeout(10_000);
+  page.setDefaultTimeout(30_000);
   page.on("console", (msg) => {
     if (msg.type() === "error") console.log("[browser console]", msg.text());
   });
