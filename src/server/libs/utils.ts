@@ -96,32 +96,51 @@ export function openEventStream<T>(res: ServerResponse, req: IncomingMessage) {
   res.flushHeaders?.();
 
   let closed = false;
-  req.on("close", () => {
+
+  const markClosed = () => {
     closed = true;
+  };
+
+  res.on("close", markClosed);
+  res.on("error", (err) => {
+    closed = true;
+    console.error("SSE response error:", err);
   });
 
+  const isClosed = () => closed || res.writableEnded || res.destroyed;
+
   const sendEvent = (event: string, data: unknown) => {
+    if (isClosed()) {
+      return false;
+    }
+
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+    return true;
   };
 
   const onProgress = (event: T) => {
-    if (closed) return;
     sendEvent("progress", event);
   };
 
   const fail = (status: number, message: string) => {
-    if (closed) return;
-    try {
-      sendEvent("failed", { status, message });
-    } catch (err) {
-      console.error("Error sending failed event:", err);
+    if (isClosed()) {
+      return;
     }
-    res.end();
+
+    sendEvent("failed", { status, message });
+
+    if (!res.writableEnded && !res.destroyed) {
+      res.end();
+    }
   };
 
-  const isClosed = () => closed;
-
-  return { sendEvent, onProgress, fail, isClosed };
+  return {
+    sendEvent,
+    onProgress,
+    fail,
+    isClosed,
+  };
 }
 
 export class HttpError extends Error {
