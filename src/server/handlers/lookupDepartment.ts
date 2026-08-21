@@ -4,7 +4,7 @@ import { getPastNYearsTermNames } from "#/libs/utils.js";
 import { CourseData, parseCourseListXlsx } from "#/libs/xlsx.js";
 import { CourseProgressCallback } from "#/main.js";
 
-const downloadConcurrency = new Semaphore(6);
+const downloadConcurrency = new Semaphore(3);
 
 export async function lookupDepartment(
   departmentId: string,
@@ -19,10 +19,12 @@ export async function lookupDepartment(
         onProgress?.({ term, status: "started" });
 
         const { ready, release } = downloadConcurrency.acquire();
-        await ready;
 
         try {
-          const savePath = await downloadCourseList(term, departmentId, semaphoreReady);
+          const savePath = await downloadCourseList(term, departmentId, [
+            semaphoreReady ?? Promise.resolve(),
+            ready,
+          ]);
           if (savePath) {
             const courseList = await parseCourseListXlsx(savePath);
             if (courseList.length > 0) {

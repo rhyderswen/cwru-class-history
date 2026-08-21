@@ -118,7 +118,7 @@ apiRouter.get(
     try {
       res.send(
         await withRetry(async () => {
-          const savePath = await downloadCourseList(term, departmentId, ready);
+          const savePath = await downloadCourseList(term, departmentId, [ready]);
           return await findConflictingCourses(
             savePath,
             departmentId,

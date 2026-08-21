@@ -20,7 +20,7 @@ export type CourseConflictResult = Omit<SingleCourseData, "offerings"> & {
   nonconflicting: Record<string, OfferingWithConflicts[]>;
 };
 
-const downloadConcurrency = new Semaphore(6);
+const downloadConcurrency = new Semaphore(3);
 
 export async function getConflictsBetweenCourses(
   semester: string,
@@ -109,9 +109,11 @@ async function downloadWithLimit(
   semaphoreReady?: Promise<void>,
 ) {
   const { ready, release } = downloadConcurrency.acquire();
-  await ready;
   try {
-    return await downloadCourseList(term, departmentId, semaphoreReady);
+    return await downloadCourseList(term, departmentId, [
+      semaphoreReady ?? Promise.resolve(),
+      ready,
+    ]);
   } finally {
     release();
   }

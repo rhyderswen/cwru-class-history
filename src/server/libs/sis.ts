@@ -15,14 +15,14 @@ const OUTPUT_DIR = path.resolve(__dirname, "../downloads");
 export async function downloadCourseList(
   termLabel: string,
   subjectCode: string,
-  semaphoreReady?: Promise<void>,
+  semaphoreWaits?: Promise<void>[],
 ) {
   let cachedFile = await checkIfRecentlyCached(subjectCode, termLabel);
   if (cachedFile) {
     return cachedFile;
   }
 
-  await semaphoreReady;
+  await Promise.all(semaphoreWaits || []);
 
   // Check again because another request may have downloaded the file while waiting for the semaphore
   cachedFile = await checkIfRecentlyCached(subjectCode, termLabel);
@@ -112,7 +112,7 @@ export async function downloadCourseList(
   // Click Download Excel
   let download: Download | undefined;
   [download] = await Promise.all([
-    page.waitForEvent("download", { timeout: 30_000 }),
+    page.waitForEvent("download", { timeout: 15_000 }),
     page
       .getByText(/download to excel/i)
       .first()
@@ -169,7 +169,7 @@ export async function fetchActiveTermsAndDepartments() {
   const context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();
 
-  page.setDefaultTimeout(10_000);
+  page.setDefaultTimeout(15_000);
   page.on("console", (msg) => {
     if (msg.type() === "error") console.log("[browser console]", msg.text());
   });

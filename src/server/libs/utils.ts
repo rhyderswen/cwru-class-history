@@ -111,7 +111,11 @@ export function openEventStream<T>(res: ServerResponse, req: IncomingMessage) {
 
   const fail = (status: number, message: string) => {
     if (closed) return;
-    sendEvent("failed", { status, message });
+    try {
+      sendEvent("failed", { status, message });
+    } catch (err) {
+      console.error("Error sending failed event:", err);
+    }
     res.end();
   };
 
