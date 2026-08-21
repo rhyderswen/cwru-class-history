@@ -4,12 +4,13 @@ import "./Selector.css";
 
 export interface CourseBadgeProps {
   options: string[];
-  setSelected: (option: string) => void;
+  onSelected: (option: string) => void;
   hideIndicator?: boolean;
   overrideValue?: string;
+  my?: number | string;
 }
 
-function Selector({ options, setSelected, hideIndicator, overrideValue }: CourseBadgeProps) {
+function Selector({ options, onSelected, hideIndicator, overrideValue, my }: CourseBadgeProps) {
   const [rootSelectorRef, setRootSelectorRef] = useState<HTMLDivElement | null>(null);
   const [controlsRefs, setControlsRefs] = useState<Record<string, HTMLButtonElement | null>>({});
   const [selectorIndex, setSelectorIndex] = useState(0);
@@ -30,13 +31,13 @@ function Selector({ options, setSelected, hideIndicator, overrideValue }: Course
       const index = options.toSorted().indexOf(overrideValue);
       if (index !== -1) {
         setSelectorIndex(index);
-        setSelected(overrideValue);
+        onSelected(overrideValue);
       }
     }
   }, [overrideValue]);
 
   return (
-    <Box className={"selectorRoot"} ref={setRootSelectorRef} mx="auto" my="xs">
+    <Box className={"selectorRoot"} ref={setRootSelectorRef} mx="auto" my={my ?? "xs"}>
       {options.toSorted().map((option, index) => (
         <UnstyledButton
           key={option}
@@ -44,7 +45,7 @@ function Selector({ options, setSelected, hideIndicator, overrideValue }: Course
           ref={setControlRef(index)}
           onClick={() => {
             setSelectorIndex(index);
-            setSelected(option);
+            onSelected(option);
           }}
           mod={{ active: selectorIndex === index }}
         >

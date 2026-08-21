@@ -1,4 +1,4 @@
-import { ConflictingCourse } from "#/libs/xlsx";
+import { ConflictingCourse, PartiallyConflictingCourse } from "#/libs/xlsx";
 import { useSearchPage } from "@/contexts/searchPageContext";
 import { getColoredNumber, getCourseCodeColor, shortenedDaysToColors } from "@/libs/color";
 import {
@@ -37,11 +37,11 @@ function CourseFloating() {
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json() as Promise<{
         fullConflicts: ConflictingCourse[];
-        partialConflicts: ConflictingCourse[];
+        partialConflicts: PartiallyConflictingCourse[];
       }>;
     },
     enabled: courseFloatingOpened && !!selectedCourse?.days && !!selectedCourse?.time,
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const listData = [
@@ -138,16 +138,24 @@ function CourseFloating() {
                     <Text>{selectedCourse?.time}</Text>
                     {isLoading ?
                       <Group mt={4} gap={6}>
-                        <Text>Conflicts:</Text>
+                        <Text>{selectedCourse?.catalogNumber.slice(0, 4)} Conflicts:</Text>
                         <Loader color="blue" size="sm" />
                       </Group>
+                    : isError ?
+                      <Text c="red" fs="italic" mt={4}>
+                        An error occurred while fetching conflicts
+                      </Text>
                     : <>
-                        {((conflicts?.fullConflicts?.length ?? 0) > 0 ||
-                          (conflicts?.partialConflicts?.length ?? 0) > 0) && (
+                        {(
+                          (conflicts?.fullConflicts?.length ?? 0) > 0 ||
+                          (conflicts?.partialConflicts?.length ?? 0) > 0
+                        ) ?
                           <>
-                            <Text mt={4}>Conflicts:</Text>
+                            <Text mt={4}>
+                              {selectedCourse?.catalogNumber.slice(0, 4)} Conflicts:
+                            </Text>
                             <Paper shadow="none" p="xs" bg="var(--mantine-color-gray-0)" withBorder>
-                              <Group gap="0 4px">
+                              <Group gap={4}>
                                 {conflicts?.fullConflicts.map((c, index) => (
                                   <CourseBadge
                                     key={index}
@@ -166,8 +174,8 @@ function CourseFloating() {
                                     courseCode={c.courseCode}
                                     displayStr={
                                       c.multipleComponents ?
-                                        `${c.courseCode} (${c.component})`
-                                      : undefined
+                                        `${c.courseCode} (${c.numConflicts} ${c.component})`
+                                      : `${c.courseCode} (${c.numConflicts})`
                                     }
                                     color="gray"
                                   />
@@ -175,7 +183,10 @@ function CourseFloating() {
                               </Group>
                             </Paper>
                           </>
-                        )}
+                        : <Text mt={4} fs="italic" c="muted">
+                            No conflicts within {selectedCourse?.catalogNumber.slice(0, 4)}!
+                          </Text>
+                        }
                       </>
                     }
                   </>

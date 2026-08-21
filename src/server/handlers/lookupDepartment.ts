@@ -1,11 +1,11 @@
 import { downloadCourseList } from "#/libs/sis.js";
 import { getPastNYearsTermNames } from "#/libs/utils.js";
 import { CourseData, parseCourseListXlsx } from "#/libs/xlsx.js";
-import { ProgressCallback } from "#/main.js";
+import { CourseProgressCallback } from "#/main.js";
 
 export async function lookupDepartment(
   departmentId: string,
-  onProgress?: ProgressCallback,
+  onProgress?: CourseProgressCallback,
   semaphoreReady?: Promise<void>,
 ) {
   const terms = await getPastNYearsTermNames(4);

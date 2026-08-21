@@ -74,6 +74,7 @@ export async function downloadCourseList(
       throw new Error(`Department grid failed to load for ${termLabel}`, { cause: err });
     }
 
+    await createEmptyXlsx(savePath);
     console.log(`${subjectCode} is not listed in ${termLabel}.`);
     return "";
   }

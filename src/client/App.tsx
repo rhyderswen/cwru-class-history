@@ -59,6 +59,10 @@ const router = createBrowserRouter([
           },
         ],
       },
+      {
+        path: "/conflicts",
+        element: <Home />,
+      },
     ],
   },
 ]);

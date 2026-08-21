@@ -67,7 +67,7 @@ function Course({ courseCode, title, offerings }: CourseData) {
         <Divider />
         <Selector
           options={offeredSemesters}
-          setSelected={setSemester}
+          onSelected={setSemester}
           overrideValue={searchParams.get("sem") ?? undefined}
         />
         <Stack m="md">

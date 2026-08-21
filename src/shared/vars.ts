@@ -57,3 +57,31 @@ export const DaysOfWeek: Record<string, string> = {
 };
 
 export const DayOrder = ["U", "M", "T", "W", "R", "F", "S", "A", ""]; // "A" is async, "" is for no specified days
+
+export const COMPONENT_NAMES: Record<string, CourseComponent> = {
+  CLN: CourseComponent.CLINICAL,
+  COP: CourseComponent.COOP,
+  DIS: CourseComponent.DISCUSSION,
+  DSR: CourseComponent.DISSERTATION,
+  FLD: CourseComponent.FIELD,
+  IND: CourseComponent.INDEPENDENT,
+  LAB: CourseComponent.LAB,
+  LEC: CourseComponent.LECTURE,
+  PER: CourseComponent.PERFORMANCE,
+  PED: CourseComponent.PHYSICALEDUCATION,
+  PRA: CourseComponent.PRACTICUM,
+  RCT: CourseComponent.RECITAL,
+  REC: CourseComponent.RECITATION,
+  RSC: CourseComponent.RESEARCH,
+  SEM: CourseComponent.SEMINAR,
+  STU: CourseComponent.STUDIO,
+  THE: CourseComponent.THESIS,
+  WRK: CourseComponent.WORKSHOP,
+  Unknown: CourseComponent.UNKNOWN,
+};
+
+export function parseComponent(raw: string): CourseComponent {
+  const code = raw.trim().toUpperCase();
+  const match = COMPONENT_NAMES[code];
+  return match ?? CourseComponent.UNKNOWN;
+}

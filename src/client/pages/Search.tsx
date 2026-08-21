@@ -15,6 +15,7 @@ import {
   Progress,
   Stack,
   Text,
+  Title,
   Transition,
 } from "@mantine/core";
 import { useWindowScroll } from "@mantine/hooks";
@@ -77,6 +78,7 @@ function Search() {
       if (status && status >= 400 && status < 500) return false;
       return failureCount < 3;
     },
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   function filterData(data: CourseData[] | undefined): CourseData[] {
@@ -105,8 +107,6 @@ function Search() {
     return filteredData;
   }
 
-  console.log(data);
-
   return (
     <>
       <title>{`${department?.toUpperCase() ?? "CWRU"} Course History`}</title>
@@ -115,7 +115,7 @@ function Search() {
           <Group w="fit-content" gap={4}>
             <Selector
               options={["Fall", "Spring", "Summer"]}
-              setSelected={(sem) => updateParam("sem", sem)}
+              onSelected={(sem) => updateParam("sem", sem)}
               hideIndicator={searchParams.get("sem") === null}
             />
             {searchParams.get("sem") && <CloseButton onClick={() => updateParam("sem", "")} />}
@@ -139,7 +139,7 @@ function Search() {
         : isLoading ?
           <Center py="xl" w="100%">
             <Stack align="center" w="100%" gap="xs">
-              <Text ta="center" mb="lg">
+              <Text ta="center">
                 Fetching course data from SIS. If this hasn't been cached recently, this may take a
                 bit...
               </Text>
@@ -162,6 +162,12 @@ function Search() {
             </Stack>
           </Center>
         : <Stack align="stretch" w="100%" mx="auto" gap="sm">
+            <Title order={4}>
+              {filterData(data).length} {department?.toUpperCase()} courses{" "}
+              <Text inline span>
+                in the past 4 years
+              </Text>
+            </Title>
             {filterData(data)?.map((course: CourseData) => (
               <Course
                 key={course.courseCode}
@@ -170,9 +176,6 @@ function Search() {
                 offerings={course.offerings}
               />
             ))}
-            {filterData(data).length === 0 && (
-              <Center>No courses found in the past 4 years.</Center>
-            )}
           </Stack>
         }
         <Affix position={{ bottom: 20, left: 20 }}>

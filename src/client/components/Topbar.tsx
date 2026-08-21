@@ -23,7 +23,7 @@ const Topbar = ({ children }: TopbarProps) => {
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   useEffect(() => {
@@ -47,7 +47,7 @@ const Topbar = ({ children }: TopbarProps) => {
             CWRU Course History
           </Title>
         </Link>
-        <Group wrap="nowrap" gap="sm">
+        <Group wrap="nowrap" gap={location.pathname.startsWith("/search/") ? "sm" : 0}>
           <Box
             style={{
               flexGrow: 1,
@@ -84,7 +84,7 @@ const Topbar = ({ children }: TopbarProps) => {
             }}
           >
             <SearchBar
-              placeholder="Filter classes..."
+              placeholder="Search classes..."
               onChange={(value) => updateParam("q", value)}
               ref={filterBarRef}
             />

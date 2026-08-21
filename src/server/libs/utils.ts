@@ -1,7 +1,7 @@
 import { fetchActiveTermsAndDepartments } from "#/libs/sis.js";
-import { CourseDataEvent } from "#/main.js";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -70,7 +70,24 @@ export async function getPastNYearsTermNames(n: number) {
   return terms;
 }
 
-export function openEventStream(res: any, req: any) {
+export async function getMostRecentSeasonTerm(season: string, n = 1) {
+  const terms = await getPastNYearsTermNames(n + 1);
+
+  return terms.filter((term) => term.startsWith(season));
+}
+
+export function rangesOverlap(
+  a: { start: number; end: number },
+  b: { start: number; end: number },
+): boolean {
+  return a.start < b.end && b.start < a.end;
+}
+
+export function daysOverlap(a: string, b: string): boolean {
+  return a.split("").some((day) => b.includes(day));
+}
+
+export function openEventStream<T>(res: ServerResponse, req: IncomingMessage) {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
@@ -87,7 +104,7 @@ export function openEventStream(res: any, req: any) {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
-  const onProgress = (event: CourseDataEvent) => {
+  const onProgress = (event: T) => {
     if (closed) return;
     sendEvent("progress", event);
   };
@@ -101,4 +118,14 @@ export function openEventStream(res: any, req: any) {
   const isClosed = () => closed;
 
   return { sendEvent, onProgress, fail, isClosed };
+}
+
+export class HttpError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.name = "HttpError";
+  }
 }

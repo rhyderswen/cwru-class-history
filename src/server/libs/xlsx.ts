@@ -1,3 +1,4 @@
+import { daysOverlap, rangesOverlap } from "#/libs/utils.js";
 import ExcelJS from "exceljs";
 import { CourseComponent } from "~/vars.js";
 
@@ -56,6 +57,22 @@ export interface CourseData {
   offerings: Record<string, Record<string, Omit<OfferingInfo, "component">[]>>;
 }
 
+export interface SingleOfferingInfo {
+  component: string;
+  courseNumber: number;
+  sectionNumber: number;
+  days: string;
+  time: string;
+}
+
+export type SingleCourseRow = CourseInfo & SingleOfferingInfo;
+
+export interface SingleCourseData {
+  courseCode: string;
+  title: string;
+  offerings: Record<string, Omit<SingleOfferingInfo, "component">[]>;
+}
+
 export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
@@ -102,14 +119,54 @@ export async function parseCourseListXlsx(filePath: string): Promise<CourseRow[]
   return rows;
 }
 
+export async function parseSingleCourseXlsx(filePath: string, catalogNumber: string) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+  const sheet = workbook.worksheets[0];
+
+  const headerRow = sheet.getRow(1).values as string[];
+  const colIndex = (name: string) => headerRow.indexOf(name);
+
+  const rows: SingleCourseRow[] = [];
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header
+
+    const currentCatalogNumber = String(row.getCell(colIndex("CATALOG_NBR")).value ?? "");
+    if (currentCatalogNumber !== catalogNumber) return;
+
+    const courseNumber = Number(row.getCell(colIndex("CLASS_NBR")).value ?? -1);
+    if (rows.some((r) => r.courseNumber == courseNumber)) return; // skip duplicates
+
+    let component = String(row.getCell(colIndex("SSR_COMPONENT")).value ?? "");
+    component = component.charAt(0).toUpperCase() + component.slice(1).toLowerCase();
+
+    rows.push({
+      catalogNumber: currentCatalogNumber,
+      title: String(row.getCell(colIndex("CW_CLASS_TITLE")).value ?? ""),
+      component: component,
+      courseNumber: courseNumber,
+      sectionNumber: Number(row.getCell(colIndex("CLASS_SECTION")).value ?? -1),
+      days: shrinkDaysString(String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim()),
+      time: formatTimeString(String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? "")),
+    });
+  });
+
+  return rows;
+}
+
 export interface ConflictingCourse {
   courseCode: string; // CSDS 101
   component: string;
   multipleComponents: boolean; // if the class has more than one component
 }
 
+export interface PartiallyConflictingCourse extends ConflictingCourse {
+  numConflicts: string; // e.g. "1/2"
+}
+
 export async function findConflictingCourses(
   filePath: string,
+  departmentId: string,
   catalogNumber: string,
   days: string,
   timeRange: {
@@ -125,11 +182,11 @@ export async function findConflictingCourses(
   const colIndex = (name: string) => headerRow.indexOf(name);
 
   const fullConflicts: ConflictingCourse[] = [];
-  let partialConflicts: ConflictingCourse[] = [];
+  let partialConflicts: PartiallyConflictingCourse[] = [];
 
   let currentCourse = "";
-  let currentConflictingComponents = new Set<string>();
-  let currentNonconflictingComponents = new Set<string>();
+  let currentConflictingComponents: string[] = [];
+  let currentNonconflictingComponents: string[] = [];
 
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // skip header
@@ -137,17 +194,22 @@ export async function findConflictingCourses(
     const catalogNum = String(row.getCell(colIndex("CATALOG_NBR")).value ?? "");
     if (catalogNumber === catalogNum) return;
 
-    const fileNameIndex = filePath.indexOf("downloads/") + 10;
-    const courseCode = filePath.slice(fileNameIndex, fileNameIndex + 4) + " " + catalogNum;
+    const courseCode = `${departmentId} ${catalogNum}`;
 
     if (courseCode !== currentCourse) {
       const multipleComponents =
         new Set([...currentConflictingComponents, ...currentNonconflictingComponents]).size > 1;
 
-      currentConflictingComponents.forEach((component) => {
-        if (currentNonconflictingComponents.has(component)) {
+      new Set(currentConflictingComponents).forEach((component) => {
+        // set to remove duplicates
+        if (currentNonconflictingComponents.includes(component)) {
           if (!fullConflicts.some((c) => c.courseCode === currentCourse)) {
-            partialConflicts.push({ courseCode: currentCourse, component, multipleComponents });
+            partialConflicts.push({
+              courseCode: currentCourse,
+              component,
+              multipleComponents,
+              numConflicts: `${currentConflictingComponents.length} of ${currentConflictingComponents.length + currentNonconflictingComponents.length}`,
+            });
           }
         } else {
           fullConflicts.push({ courseCode: currentCourse, component, multipleComponents });
@@ -157,8 +219,8 @@ export async function findConflictingCourses(
         }
       });
 
-      currentConflictingComponents.clear();
-      currentNonconflictingComponents.clear();
+      currentConflictingComponents = [];
+      currentNonconflictingComponents = [];
       currentCourse = courseCode;
     }
 
@@ -170,8 +232,7 @@ export async function findConflictingCourses(
     component = component.charAt(0).toUpperCase() + component.slice(1).toLowerCase();
 
     // No overlap in days, so no conflict
-    if (!currentDays.split("").some((day) => days.includes(day.charAt(0))))
-      return currentNonconflictingComponents.add(component);
+    if (!daysOverlap(currentDays, days)) return currentNonconflictingComponents.push(component);
 
     const currentTime = parseTimeRange(
       String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? ""),
@@ -179,9 +240,9 @@ export async function findConflictingCourses(
     if (!currentTime) return;
 
     if (rangesOverlap(currentTime, timeRange)) {
-      currentConflictingComponents.add(component);
+      currentConflictingComponents.push(component);
     } else {
-      currentNonconflictingComponents.add(component);
+      currentNonconflictingComponents.push(component);
     }
   });
 
@@ -297,9 +358,20 @@ export async function isValidXlsx(filePath: string): Promise<boolean> {
   }
 }
 
+export async function isEmptyXlsx(filePath: string): Promise<boolean> {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    return (workbook.worksheets[0]?.actualRowCount ?? 0) <= 1; // header row counts
+  } catch {
+    return false;
+  }
+}
+
 // timeStr format is "12:35 PM-1:50 PM"
 export function parseTimeRange(timeStr: string) {
   if (!timeStr) return null;
+  if (timeStr === "-") return null; // When there is a day but no time, it's just a dash
 
   let [startRaw, endRaw] = timeStr.split("-");
 
@@ -336,11 +408,4 @@ function parseTime(raw: string) {
   const date = new Date();
   date.setHours(hour, Number(minuteStr), 0, 0);
   return date;
-}
-
-function rangesOverlap(
-  a: { start: number; end: number },
-  b: { start: number; end: number },
-): boolean {
-  return a.start < b.end && b.start < a.end;
 }
