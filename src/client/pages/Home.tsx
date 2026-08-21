@@ -112,8 +112,6 @@ function Home() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  console.log(data);
-
   function onSubmit(input: string, semester: string) {
     navigate(`/conflicts?sem=${encodeURIComponent(semester)}&q=${encodeURIComponent(input)}`);
   }

@@ -1,34 +1,6 @@
 import { daysOverlap, rangesOverlap } from "#/libs/utils.js";
 import ExcelJS from "exceljs";
-import { CourseComponent } from "~/vars.js";
-
-export const COMPONENT_NAMES: Record<string, CourseComponent> = {
-  CLN: CourseComponent.CLINICAL,
-  COP: CourseComponent.COOP,
-  DIS: CourseComponent.DISCUSSION,
-  DSR: CourseComponent.DISSERTATION,
-  FLD: CourseComponent.FIELD,
-  IND: CourseComponent.INDEPENDENT,
-  LAB: CourseComponent.LAB,
-  LEC: CourseComponent.LECTURE,
-  PER: CourseComponent.PERFORMANCE,
-  PED: CourseComponent.PHYSICALEDUCATION,
-  PRA: CourseComponent.PRACTICUM,
-  RCT: CourseComponent.RECITAL,
-  REC: CourseComponent.RECITATION,
-  RSC: CourseComponent.RESEARCH,
-  SEM: CourseComponent.SEMINAR,
-  STU: CourseComponent.STUDIO,
-  THE: CourseComponent.THESIS,
-  WRK: CourseComponent.WORKSHOP,
-  Unknown: CourseComponent.UNKNOWN,
-};
-
-function parseComponent(raw: string): CourseComponent {
-  const code = raw.trim().toUpperCase();
-  const match = COMPONENT_NAMES[code];
-  return match ?? CourseComponent.UNKNOWN;
-}
+import { CourseComponent, parseComponent } from "~/vars.js";
 
 export interface CourseInfo {
   catalogNumber: string;
@@ -140,13 +112,18 @@ export async function parseSingleCourseXlsx(filePath: string, catalogNumber: str
     let component = String(row.getCell(colIndex("SSR_COMPONENT")).value ?? "");
     component = component.charAt(0).toUpperCase() + component.slice(1).toLowerCase();
 
+    const room = String(row.getCell(colIndex("CW_MEETING_ROOM")).value ?? "");
+
     rows.push({
       catalogNumber: currentCatalogNumber,
       title: String(row.getCell(colIndex("CW_CLASS_TITLE")).value ?? ""),
       component: component,
       courseNumber: courseNumber,
       sectionNumber: Number(row.getCell(colIndex("CLASS_SECTION")).value ?? -1),
-      days: shrinkDaysString(String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim()),
+      days: shrinkDaysString(
+        String(row.getCell(colIndex("CLASS_MTG_DAYS")).value ?? "").trim(),
+        room,
+      ),
       time: formatTimeString(String(row.getCell(colIndex("CW_CLASS_MTG_TIMES")).value ?? "")),
     });
   });

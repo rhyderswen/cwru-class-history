@@ -13,7 +13,7 @@ function CourseTimeText({ section, days, time }: TimeBadgeProps) {
   if (days.length === 0) {
     return (
       <Text c="var(--mantine-color-gray-5)" fw={700}>
-        No time data
+        Section {section} - No time data
       </Text>
     );
   }

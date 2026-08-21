@@ -11,7 +11,7 @@ function CourseTimeText({ section, days, time }: TimeBadgeProps) {
   const textStr = `Section ${section} - ${days} ${time}`;
 
   if (days.length === 0) {
-    return <Badge color="var(--mantine-color-gray-5)">No time data</Badge>;
+    return <Badge color="var(--mantine-color-gray-5)">Section {section} - No time data</Badge>;
   }
 
   if (days.length === 1) {
