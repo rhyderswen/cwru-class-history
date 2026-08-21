@@ -1,7 +1,10 @@
+import { Semaphore } from "#/libs/semaphore.js";
 import { downloadCourseList } from "#/libs/sis.js";
 import { getPastNYearsTermNames } from "#/libs/utils.js";
 import { CourseData, parseCourseListXlsx } from "#/libs/xlsx.js";
 import { CourseProgressCallback } from "#/main.js";
+
+const downloadConcurrency = new Semaphore(3);
 
 export async function lookupDepartment(
   departmentId: string,
@@ -14,15 +17,25 @@ export async function lookupDepartment(
     await Promise.all(
       terms.map(async (term) => {
         onProgress?.({ term, status: "started" });
-        const savePath = await downloadCourseList(term, departmentId, semaphoreReady);
-        if (savePath) {
-          const courseList = await parseCourseListXlsx(savePath);
-          if (courseList.length > 0) {
-            onProgress?.({ term, status: "finished" });
-            return { term, courseList };
+
+        // NEW: wait for a concurrency slot before doing any browser work
+        const { ready, release } = downloadConcurrency.acquire();
+        await ready;
+
+        try {
+          const savePath = await downloadCourseList(term, departmentId, semaphoreReady);
+          if (savePath) {
+            const courseList = await parseCourseListXlsx(savePath);
+            if (courseList.length > 0) {
+              return { term, courseList };
+            }
           }
+        } catch (err) {
+          console.error(`Failed to download/parse ${departmentId} ${term}:`, err);
+        } finally {
+          release();
+          onProgress?.({ term, status: "finished" });
         }
-        onProgress?.({ term, status: "finished" });
       }),
     )
   ).filter((item) => item !== undefined);

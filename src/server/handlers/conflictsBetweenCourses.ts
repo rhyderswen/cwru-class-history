@@ -1,3 +1,4 @@
+import { Semaphore } from "#/libs/semaphore.js";
 import { downloadCourseList } from "#/libs/sis.js";
 import { daysOverlap, getMostRecentSeasonTerm, HttpError, rangesOverlap } from "#/libs/utils.js";
 import {
@@ -19,6 +20,8 @@ export type CourseConflictResult = Omit<SingleCourseData, "offerings"> & {
   nonconflicting: Record<string, OfferingWithConflicts[]>;
 };
 
+const downloadConcurrency = new Semaphore(3);
+
 export async function getConflictsBetweenCourses(
   semester: string,
   courses: string[],
@@ -35,8 +38,8 @@ export async function getConflictsBetweenCourses(
       departmentArr.map(async (departmentId) => {
         onProgress?.({ department: departmentId, status: "started" });
         const [mostRecent, nextMostRecent] = await Promise.all([
-          downloadCourseList(terms[0], departmentId, semaphoreReady),
-          downloadCourseList(terms[1], departmentId, semaphoreReady),
+          downloadWithLimit(terms[0], departmentId, semaphoreReady),
+          downloadWithLimit(terms[1], departmentId, semaphoreReady),
         ]);
         onProgress?.({ department: departmentId, status: "finished" });
         return [departmentId, [mostRecent, nextMostRecent]];
@@ -98,6 +101,20 @@ export async function getConflictsBetweenCourses(
     term: terms[termIndex],
     courses: Array.from(courseMap.values()).map(splitByConflictStatus),
   };
+}
+
+async function downloadWithLimit(
+  term: string,
+  departmentId: string,
+  semaphoreReady?: Promise<void>,
+) {
+  const { ready, release } = downloadConcurrency.acquire();
+  await ready;
+  try {
+    return await downloadCourseList(term, departmentId, semaphoreReady);
+  } finally {
+    release();
+  }
 }
 
 function splitByConflictStatus(course: CourseDataWithConflicts): CourseConflictResult {
