@@ -4,7 +4,7 @@ import { getPastNYearsTermNames } from "#/libs/utils.js";
 import { CourseData, parseCourseListXlsx } from "#/libs/xlsx.js";
 import { CourseProgressCallback } from "#/main.js";
 
-const downloadConcurrency = new Semaphore(3);
+const downloadConcurrency = new Semaphore(6);
 
 export async function lookupDepartment(
   departmentId: string,

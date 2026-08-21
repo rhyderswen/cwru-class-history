@@ -86,28 +86,38 @@ export async function downloadCourseList(
   // Click search
   const searchButton = page.getByRole("button", { name: /^search$/i }).first();
   await searchButton.click();
-  await page.waitForLoadState("networkidle");
+
+  const noResultsModal = page.locator("#ptModContent_0").filter({ hasText: /no results/i });
+  const downloadLink = page.getByText(/download to excel/i).first();
+
+  const modalAppeared = await Promise.race([
+    noResultsModal.waitFor({ state: "visible", timeout: 10_000 }).then(() => true),
+    downloadLink.waitFor({ state: "visible", timeout: 10_000 }).then(() => false),
+  ]).catch(() => null);
+
+  if (modalAppeared === null) {
+    await browser.close();
+    throw new Error(
+      `Neither results nor "no results" modal appeared for ${subjectCode} ${termLabel}`,
+    );
+  }
+
+  if (modalAppeared) {
+    await browser.close();
+    await createEmptyXlsx(savePath);
+    console.log(`${subjectCode} had no courses in ${termLabel}.`);
+    return savePath;
+  }
 
   // Click Download Excel
   let download: Download | undefined;
-  try {
-    [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: 30_000 }),
-      page
-        .getByText(/download to excel/i)
-        .first()
-        .click(),
-    ]);
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith("locator.click: Timeout")) {
-      await browser.close();
-      await createEmptyXlsx(savePath);
-      console.log(`${subjectCode} had no courses in ${termLabel}.`);
-      return "";
-    }
-
-    throw err;
-  }
+  [download] = await Promise.all([
+    page.waitForEvent("download", { timeout: 30_000 }),
+    page
+      .getByText(/download to excel/i)
+      .first()
+      .click(),
+  ]);
 
   await download?.saveAs(savePath);
   await browser.close();

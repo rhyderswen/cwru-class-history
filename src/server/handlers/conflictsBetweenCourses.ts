@@ -20,7 +20,7 @@ export type CourseConflictResult = Omit<SingleCourseData, "offerings"> & {
   nonconflicting: Record<string, OfferingWithConflicts[]>;
 };
 
-const downloadConcurrency = new Semaphore(3);
+const downloadConcurrency = new Semaphore(6);
 
 export async function getConflictsBetweenCourses(
   semester: string,
