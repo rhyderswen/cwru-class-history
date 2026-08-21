@@ -18,7 +18,6 @@ export async function lookupDepartment(
       terms.map(async (term) => {
         onProgress?.({ term, status: "started" });
 
-        // NEW: wait for a concurrency slot before doing any browser work
         const { ready, release } = downloadConcurrency.acquire();
         await ready;
 
@@ -26,13 +25,11 @@ export async function lookupDepartment(
           const savePath = await downloadCourseList(term, departmentId, semaphoreReady);
           if (savePath) {
             const courseList = await parseCourseListXlsx(savePath);
-            onProgress?.({ term, status: "finished" });
             if (courseList.length > 0) {
+              onProgress?.({ term, status: "finished" });
               return { term, courseList };
             }
           }
-        } catch (err) {
-          console.error(`Failed to download/parse ${departmentId} ${term}:`, err);
         } finally {
           release();
         }
