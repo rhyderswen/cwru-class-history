@@ -40,7 +40,9 @@ function Search() {
         const done = new Set<string>();
         setProgress({ done: 0, total: 0 });
 
-        const source = new EventSource(`/api/lookupDepartment/${department}`);
+        const source = new EventSource(
+          `${import.meta.env.BASE_URL}api/lookupDepartment/${department}`,
+        );
 
         source.addEventListener("queued", (e) => {
           const event: QueuedEvent = JSON.parse(e.data);

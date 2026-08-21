@@ -32,40 +32,45 @@ function departmentLoader({ params }: LoaderFunctionArgs) {
   return { department };
 }
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      element: <Layout />,
+      errorElement: <Error />,
+      children: [
+        {
+          path: "/",
+          element: <Home />,
+        },
+        {
+          path: "/search",
+          children: [
+            {
+              index: true, // matches exactly /schedule
+              element: <Navigate to="/" replace />,
+            },
+            {
+              path: ":department", // matches /schedule/:department
+              element: (
+                <SearchPageProvider>
+                  <Search />
+                </SearchPageProvider>
+              ),
+              loader: departmentLoader,
+            },
+          ],
+        },
+        {
+          path: "/conflicts",
+          element: <Home />,
+        },
+      ],
+    },
+  ],
   {
-    element: <Layout />,
-    errorElement: <Error />,
-    children: [
-      {
-        path: "/",
-        element: <Home />,
-      },
-      {
-        path: "/search",
-        children: [
-          {
-            index: true, // matches exactly /schedule
-            element: <Navigate to="/" replace />,
-          },
-          {
-            path: ":department", // matches /schedule/:department
-            element: (
-              <SearchPageProvider>
-                <Search />
-              </SearchPageProvider>
-            ),
-            loader: departmentLoader,
-          },
-        ],
-      },
-      {
-        path: "/conflicts",
-        element: <Home />,
-      },
-    ],
+    basename: import.meta.env.BASE_URL,
   },
-]);
+);
 
 function App() {
   return <RouterProvider router={router} />;

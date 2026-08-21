@@ -19,7 +19,7 @@ const Topbar = ({ children }: TopbarProps) => {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const res = await fetch(`/api/getDepartments`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/getDepartments`);
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },

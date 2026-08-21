@@ -66,7 +66,7 @@ function Home() {
         setProgress({ done: 0, total: 0 });
 
         const source = new EventSource(
-          `/api/conflictsBetweenCourses/${searchParams.get("sem")}/${searchParams.get("q")}`,
+          `${import.meta.env.BASE_URL}api/conflictsBetweenCourses/${searchParams.get("sem")}/${searchParams.get("q")}`,
         );
 
         source.addEventListener("queued", (e) => {

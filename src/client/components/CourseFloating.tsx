@@ -32,7 +32,7 @@ function CourseFloating() {
     queryKey: ["conflictsWithinDepartment", selectedCourse?.term, selectedCourse?.courseNumber],
     queryFn: async () => {
       const res = await fetch(
-        `/api/conflictsWithinDepartment/${selectedCourse?.term}/${selectedCourse?.catalogNumber.slice(0, 4)}/${selectedCourse?.catalogNumber.slice(5)}/${selectedCourse?.days} ${selectedCourse?.time}`,
+        `${import.meta.env.BASE_URL}api/conflictsWithinDepartment/${selectedCourse?.term}/${selectedCourse?.catalogNumber.slice(0, 4)}/${selectedCourse?.catalogNumber.slice(5)}/${selectedCourse?.days} ${selectedCourse?.time}`,
       );
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json() as Promise<{
@@ -118,16 +118,14 @@ function CourseFloating() {
               {selectedCourse?.term}
             </Text>
             <DataList gap="xs" my="xs">
-              {listData.map((item) => (
-                <>
-                  {item.value && (
-                    <DataList.Item key={item.label}>
-                      <DataList.ItemLabel>{item.label}</DataList.ItemLabel>
-                      <DataList.ItemValue>{item.value}</DataList.ItemValue>
-                    </DataList.Item>
-                  )}
-                </>
-              ))}
+              {listData
+                .filter((item) => item.value)
+                .map((item) => (
+                  <DataList.Item key={item.label}>
+                    <DataList.ItemLabel>{item.label}</DataList.ItemLabel>
+                    <DataList.ItemValue>{item.value}</DataList.ItemValue>
+                  </DataList.Item>
+                ))}
             </DataList>
             {selectedCourse?.days && (
               <>

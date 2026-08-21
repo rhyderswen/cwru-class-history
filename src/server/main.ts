@@ -197,5 +197,7 @@ apiRouter.get("/conflictsBetweenCourses/:semester/:courses", async (req, res) =>
   }
 });
 
-app.use("/api", apiRouter);
-ViteExpress.listen(app, 3000, () => console.log("Server is listening on port 3000..."));
+app.use("/courses/api", apiRouter);
+
+const PORT = Number(process.env.PORT) || 3000;
+ViteExpress.listen(app, PORT, () => console.log(`Server is listening on port ${PORT}...`));

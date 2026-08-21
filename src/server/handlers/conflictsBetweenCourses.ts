@@ -71,7 +71,7 @@ export async function getConflictsBetweenCourses(
     );
 
     if (courseRows.length === 0) {
-      throw new HttpError(404, `Course ${courseCode} not found`);
+      throw new HttpError(404, `Course ${courseCode} not found in ${terms[termIndex]}`);
     }
 
     for (const { catalogNumber, title, component, ...offeringInfo } of courseRows) {
