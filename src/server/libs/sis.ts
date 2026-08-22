@@ -1,9 +1,11 @@
-import { getFromConfig } from "#/libs/utils.js";
+import { Config, getFromConfig } from "#/libs/utils.js";
 import { createEmptyXlsx, isValidXlsx } from "#/libs/xlsx.js";
 import { readdirSync, unlinkSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, Download } from "playwright";
+import { Semaphore } from "./semaphore.js";
 
 const START_URL =
   "https://sisguest.case.edu/psc/P92SCWR_1/EMPLOYEE/SA/c/SSR_STUDENT_FL.SSR_MD_SP_FL.GBL?Action=U&MD=Y&GMenu=SSR_STUDENT_FL&GComp=SSR_START_PAGE_FL&GPage=SSR_START_PAGE_FL&scname=CS_SSR_MANAGE_CLASSES_NAV&ICAJAXTrf=true";
@@ -11,6 +13,7 @@ const START_URL =
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const OUTPUT_DIR = path.resolve(__dirname, "../downloads");
+const CONFIG_FILE = path.resolve(__dirname, "../config.json");
 
 export async function downloadCourseList(
   termLabel: string,
@@ -163,35 +166,74 @@ async function checkIfRecentlyCached(subjectCode: string, termLabel: string) {
   return filePath;
 }
 
+const activeTermSemaphore = new Semaphore(1);
+
 export async function fetchActiveTermsAndDepartments() {
+  const { ready, release } = activeTermSemaphore.acquire();
+  await ready;
+
+  // if another request has already fetched the active terms and departments, return those instead of fetching again
+  const raw = await readFile(CONFIG_FILE, "utf-8");
+  let config;
+  try {
+    config = JSON.parse(raw) as Config;
+  } catch {
+    config = { ActiveTerms: [], Departments: [], LastChecked: "" };
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  if (config.LastChecked === today) {
+    release();
+    return {
+      activeTerms: config.ActiveTerms,
+      departments: config.Departments,
+    };
+  }
+
   console.log("Fetching active terms from SIS...");
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();
 
-  page.setDefaultTimeout(15_000);
+  page.setDefaultTimeout(30_000);
   page.on("console", (msg) => {
     if (msg.type() === "error") console.log("[browser console]", msg.text());
   });
 
-  await page.goto(START_URL, { waitUntil: "networkidle" });
+  try {
+    await page.goto(START_URL, { waitUntil: "networkidle" });
 
-  const activeTermObjects = await page.locator('a[id^="SSR_CSTRMCUR_VW_DESCR"]');
-  const activeTerms = await activeTermObjects.allTextContents();
-  console.log("Finished fetching active terms from SIS!");
+    const activeTermObjects = await page.locator('a[id^="SSR_CSTRMCUR_VW_DESCR"]');
+    await page
+      .waitForFunction(
+        (selector) => {
+          const el = document.querySelector(selector);
+          return !!el && el.textContent && el.textContent.trim().length > 0;
+        },
+        'a[id^="SSR_CSTRMCUR_VW_DESCR"]',
+        { timeout: 15_000 },
+      )
+      .catch(() => {});
 
-  const departmentLocator = page.locator('span[id^="CW_CLSRCH_WRK2_DESCR50"]');
+    const activeTerms = await activeTermObjects.allTextContents();
+    console.log("Finished fetching active terms from SIS!");
 
-  await Promise.all([
-    departmentLocator.first().waitFor({ state: "visible" }),
-    activeTermObjects.last().click(),
-  ]);
+    const departmentLocator = page.locator('span[id^="CW_CLSRCH_WRK2_DESCR50"]');
 
-  const departments = await departmentLocator.allTextContents();
-  console.log("Finished fetching departments from SIS!");
+    await Promise.all([
+      departmentLocator.first().waitFor({ state: "visible" }),
+      activeTermObjects.last().click(),
+    ]);
 
-  return {
-    activeTerms: activeTerms,
-    departments: departments,
-  };
+    const departments = await departmentLocator.allTextContents();
+    console.log("Finished fetching departments from SIS!");
+
+    return {
+      activeTerms: activeTerms,
+      departments: departments,
+    };
+  } finally {
+    await browser.close();
+    release();
+  }
 }

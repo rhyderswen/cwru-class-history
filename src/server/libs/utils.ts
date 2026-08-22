@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONFIG_FILE = path.resolve(__dirname, "../config.json");
 
-interface Config {
+export interface Config {
   ActiveTerms: string[];
   Departments: string[];
   LastChecked: string;
