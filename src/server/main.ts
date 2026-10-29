@@ -92,7 +92,8 @@ apiRouter.get(
       return res.status(400).send("Department ID must be 4 characters long");
     if (!/^[a-zA-Z]+$/.test(departmentId))
       return res.status(400).send("Department ID can only be alphabetic characters");
-    if (!/^\d+$/.test(catalogNumber)) return res.status(400).send("Invalid catalog number format");
+    if (!/^\d{1,4}[A-Za-z]?$/.test(catalogNumber))
+      return res.status(400).send("Invalid catalog number format");
 
     const rawDays = date.slice(0, date.indexOf(" "));
     const rawTime = date.slice(date.indexOf(" ") + 1);
@@ -157,7 +158,7 @@ apiRouter.get("/conflictsBetweenCourses/:semester/:courses", async (req, res) =>
 
   if (splitCourses.length < 2) return fail(400, "Please enter at least two unique courses");
   if (splitCourses.length > 10) return fail(400, "Please enter at most ten courses");
-  if (!splitCourses.every((course) => /^[A-Za-z]{4}\d{3}$/.test(course)))
+  if (!splitCourses.every((course) => /^[A-Za-z]{4}\s?\d{1,4}[A-Za-z]?$/.test(course)))
     return fail(400, "Invalid course format");
 
   const departments = await getFromConfig("Departments");

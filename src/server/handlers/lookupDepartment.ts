@@ -27,8 +27,8 @@ export async function lookupDepartment(
           ]);
           if (savePath) {
             const courseList = await parseCourseListXlsx(savePath);
+            onProgress?.({ term, status: "finished" });
             if (courseList.length > 0) {
-              onProgress?.({ term, status: "finished" });
               return { term, courseList };
             }
           }
